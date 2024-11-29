@@ -1,0 +1,97 @@
+package me.rubix327.liquibasehelper.annotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.FIELD)
+@SuppressWarnings("unused")
+public @interface CbsDatamodelField {
+
+    /**
+     * Комментарий к тегу.<br>
+     * Если пустой, то не показывается при наведении на тег.
+     */
+    String comment() default "";
+
+    /**
+     * Подробное описание к тегу.<br>
+     * Отображается под комментарием ({@link #comment()}).<br>
+     * Если пустое, то не показывается при наведении на тег.
+     */
+    String description() default "";
+
+    /**
+     * Является ли xml-тег обязательным внутри мета-сущности, в которой расположен.<br>
+     * Если true, то на родительском теге ({@link CbsDatamodelClass}),
+     * будет выведено предупреждение с просьбой добавить этот тег внутри родительского.
+     */
+    boolean required() default false;
+
+    /**
+     * Максимальная длина значения xml-тега.<br>
+     * Если указано -1, то тег не проверяется по этому признаку.
+     */
+    int maxLength() default -1;
+
+    /**
+     * Возможные значения для этого xml-тега.<br>
+     * Заполняются в виде строки или массива строк.<br><br>
+     * Если массив пустой, то тег по этому признаку не проверяется.<br><br>
+     * Если это поле в аннотации объявлено вместе с {@link #availableValuesEnum()},
+     * то тег проверяется только по значениям availableValuesEnum.
+     * @see #availableValuesEnum
+     */
+    String[] availableValues() default "";
+
+    /**
+     * Возможные значения для этого xml-тега.<br>
+     * Заполняется в виде ссылки на enum.
+     * <br><br>
+     * <b>Имеет приоритет над {@link #availableValues()}.</b>
+     * <br><br>
+     * Внутри enum неподходящие значения можно отмечать {@link CbsDatamodelIgnore}.<br>
+     * Значение из enumeration получаются в следующем приоритете:
+     * <ol>
+     *     <li>Из аннотации {@link CbsDatamodelValue} (поле value)</li>
+     *     <li>Из java-поля value, объявленного внутри enumeration вместе с подходящим конструктором</li>
+     *     <li>Берется название самого поля, как есть</li>
+     * </ol>
+     */
+    Class<?> availableValuesEnum() default Object.class;
+
+    /**
+     * Возможные значения для этого xml-тега.<br>
+     * Заполняется в виде полного пути до класса-перечисления.
+     * <br><br>
+     * Функционально - то же самое, что {@link #availableValuesEnum()}, но только в виде строки
+     * (на случай, если enum недоступен из модуля metaloader).
+     * <br><br>
+     * <b>Имеет приоритет над {@link #availableValues()} и {@link #availableValuesEnum()}.</b>
+     * <br><br>
+     * Внутри enum неподходящие значения можно отмечать {@link CbsDatamodelIgnore}.<br>
+     * Значение из enumeration получаются в следующем приоритете:
+     * <ol>
+     *     <li>Из аннотации {@link CbsDatamodelValue} (поле value)</li>
+     *     <li>Из java-поля value, объявленного внутри enumeration вместе с подходящим конструктором</li>
+     *     <li>Берется название самого поля, как есть</li>
+     * </ol>
+     */
+    String availableValuesEnumPath() default "";
+
+    /**
+     * Тип значения тега.<br><br>
+     * Может быть четырех видов: String, Long, Boolean, Date.<br>
+     * <ul>
+     *     <li>Если указано String, то значение тега никак не проверяется.</li>
+     *     <li>Если указано Long, значение проверяется путем парсинга числа из него.</li>
+     *     <li>Если указано Boolean, значение может быть только 0 или 1.</li>
+     *     <li>Если указано Date, значение должно быть в формате даты (</li>
+     * </ul>
+     */
+    Class<?> type() default String.class;
+
+}
+

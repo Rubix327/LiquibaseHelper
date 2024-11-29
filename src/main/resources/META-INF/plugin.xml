@@ -1,0 +1,62 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>me.rubix327.liquibasehelper</id>
+    <name>LiquibaseHelper</name>
+    <vendor email="rubix3327@gmail.com" url="https://www.newathena.ru/">gya</vendor>
+    <description><![CDATA[
+    This plugin allows you to navigate between files in Liquibase changesets and provides the ability to create rules for XML-tags with beautiful tooltips.<br>
+    <em>Made with love by <b>gya</b> especially for New Athena.</em>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <psi.referenceContributor implementation="me.rubix327.liquibasehelper.forwardreference.XmlFileReferenceContributor" language="XML"/>
+        <psi.referenceContributor implementation="me.rubix327.liquibasehelper.forwardreference.JavaReferenceContributor" language="JAVA"/>
+        <editorNotificationProvider implementation="me.rubix327.liquibasehelper.backreference.UsageNotificationProvider"/>
+        <localInspection language="XML" implementationClass="me.rubix327.liquibasehelper.inspection.XmlTagValuesInspector"
+                         groupBundle="messages.InspectionsBundle"
+                         groupKey="group.names.probable.bugs"
+                         enabledByDefault="true"
+                         runForWholeFile="true"
+                         displayName="XmlTagValuesInspection"
+                         shortName="XmlTagValuesInspector"
+                         groupName="XML checks"/>
+        <localInspection language="JAVA" implementationClass="me.rubix327.liquibasehelper.inspection.AnnotationInspector"
+                         groupBundle="messages.InspectionsBundle"
+                         groupKey="group.names.probable.bugs"
+                         enabledByDefault="true"
+                         runForWholeFile="true"
+                         displayName="AnnotationInspector"
+                         shortName="AnnotationInspector"
+                         groupName="Java checks"/>
+        <documentationProvider implementation="me.rubix327.liquibasehelper.docs.TagDocumentationProvider"/>
+        <completion.contributor implementationClass="me.rubix327.liquibasehelper.completion.TagCompletionContributor" language="XML"/>
+        <refactoring.elementListenerProvider implementation="me.rubix327.liquibasehelper.listener.ClassRenameRefactoringListener" />
+        <projectService serviceImplementation="me.rubix327.liquibasehelper.settings.PersistentUserSettings"/>
+    </extensions>
+
+    <actions>
+        <group id="LiquibaseHelper.Menu" text="LiquibaseHelper" description="LiquibaseHelper settings">
+            <add-to-group group-id="MainMenu" anchor="last"/>
+            <action class="me.rubix327.liquibasehelper.settings.OpenSettingsAction" id="LiquibaseHelper.Actions.MenuAction" text="Settings..."/>
+        </group>
+    </actions>
+
+    <projectListeners>
+        <listener
+                class="me.rubix327.liquibasehelper.listener.FileSwitchListener"
+                topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
+
+    <project-components>
+        <component>
+            <implementation-class>me.rubix327.liquibasehelper.StartProjectComponent</implementation-class>
+        </component>
+    </project-components>
+</idea-plugin>
