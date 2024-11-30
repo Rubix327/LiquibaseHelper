@@ -13,9 +13,10 @@ import com.intellij.ui.EditorNotifications;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
-import me.rubix327.liquibasehelper.settings.StaticSettings;
 import me.rubix327.liquibasehelper.StartProjectComponent;
 import me.rubix327.liquibasehelper.Utils;
+import me.rubix327.liquibasehelper.locale.Localization;
+import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -49,7 +50,7 @@ public class UsageNotificationProvider extends EditorNotifications.Provider<Edit
                 return null;
             }
 
-            String text = "File Usages: " + usages.size();
+            String text = Localization.message("file.usages", usages.size());
             if (usages.size() == 1){
                 text += " - " + Utils.getDisplayPathCutProject(project, usages.get(0).getContainingFile().getVirtualFile().getPath());
             }
@@ -78,7 +79,7 @@ public class UsageNotificationProvider extends EditorNotifications.Provider<Edit
             }
 
             panel.icon(AllIcons.Debugger.Db_obsolete);
-            String panelText = isFileMustBeLoadedByCumulative(project, file) ? "Not loaded by a cumulative" : "Not loaded by a changeset";
+            String panelText = isFileMustBeLoadedByCumulative(project, file) ? Localization.message("file.not-loaded.cumulative") : Localization.message("file.not-loaded.changeset");
             panel.setText(panelText);
         }
         return panel;

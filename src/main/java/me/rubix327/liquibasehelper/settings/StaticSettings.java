@@ -1,6 +1,7 @@
 package me.rubix327.liquibasehelper.settings;
 
 import com.intellij.codeInspection.ProblemHighlightType;
+import me.rubix327.liquibasehelper.locale.Locale;
 
 public class StaticSettings {
 
@@ -15,5 +16,6 @@ public class StaticSettings {
     public static boolean ENABLE_SETTINGS_MENU = true;
 
     public static boolean SEARCH_ANNOTATION_BY_QUALIFIED_NAME = false;
+    public static Locale LOCALE = Locale.RU;
 
 }

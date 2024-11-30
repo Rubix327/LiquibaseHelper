@@ -2,6 +2,7 @@ package me.rubix327.liquibasehelper.inspection.model;
 
 import com.google.common.base.Objects;
 import com.intellij.psi.xml.XmlAttribute;
+import lombok.Getter;
 import me.rubix327.liquibasehelper.inspection.XmlTagValuesInspector;
 import org.jetbrains.annotations.NotNull;
 
@@ -10,23 +11,24 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Getter
 @SuppressWarnings("unused")
 public class AttributeRule {
 
     // Definers
-    public String attributeName;
-    public List<AttributeNeighbour> mustNeighbours = new ArrayList<>();
-    public String mustTagName;
-    public String mustParentName;
-    public String mustGrandParentName;
-    public String mustRootTagName;
+    private String attributeName;
+    private List<AttributeNeighbour> mustNeighbours = new ArrayList<>();
+    private String mustTagName;
+    private String mustParentName;
+    private String mustGrandParentName;
+    private String mustRootTagName;
 
     // Constraints
-    public int maxLength = -1;
-    public List<String> availableValues = new ArrayList<>();
+    private int maxLength = -1;
+    private List<String> availableValues = new ArrayList<>();
 
     // Info
-    public String attributeTooltip;
+    private String attributeTooltip;
 
     public AttributeRule(String attributeName) {
         this.attributeName = attributeName;

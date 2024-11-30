@@ -8,6 +8,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.ui.components.JBList;
 import com.intellij.util.ui.JBUI;
 import me.rubix327.liquibasehelper.Utils;
+import me.rubix327.liquibasehelper.locale.Localization;
 
 import javax.swing.*;
 import java.awt.*;
@@ -23,7 +24,7 @@ public class GoToUsagePopup {
 
     public void showUsagesPopup(List<PsiElement> usageFiles, Component anchorComponent) {
         if (usageFiles.isEmpty()) {
-            JOptionPane.showMessageDialog(null, "Использования файла не найдены.");
+            JOptionPane.showMessageDialog(null, Localization.message("file.usages.not-found"));
             return;
         }
 

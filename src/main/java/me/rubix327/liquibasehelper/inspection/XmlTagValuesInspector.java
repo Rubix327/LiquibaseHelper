@@ -9,6 +9,8 @@ import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.model.*;
+import me.rubix327.liquibasehelper.locale.DeclinationHelper;
+import me.rubix327.liquibasehelper.locale.Localization;
 import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
 
@@ -177,13 +179,13 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         if (rule == null) return;
 
         String attributeText = attribute.getValue();
-        if (rule.availableValues != null && !rule.availableValues.isEmpty() && !rule.availableValues.contains(attributeText)){
-            Utils.registerError(holder, attribute, "This tag value must be one of the following: " + rule.availableValues);
+        if (Utils.isNotEmpty(rule.getAvailableValues()) && !rule.getAvailableValues().contains(attributeText)){
+            Utils.registerError(holder, attribute, Localization.message("attribute.warn.available-values", rule.getAvailableValues()));
         }
 
         if (attributeText == null) return;
-        if (rule.maxLength != -1 && attributeText.length() > rule.maxLength){
-            Utils.registerError(holder, attribute, "The maximum length of this attribute value is " + rule.maxLength + " character" + (rule.maxLength > 1 ? "s." : "."));
+        if (rule.getMaxLength() != -1 && attributeText.length() > rule.getMaxLength()){
+            Utils.registerError(holder, attribute, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_ATTR.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
         }
     }
 
@@ -216,12 +218,12 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
 
         // Проверка на максимальную длину
         if (rule.getMaxLength() != -1 && tagText.length() > rule.getMaxLength()){
-            Utils.registerErrorOnValueOrTag(holder, tag, "The maximum length of this tag value is " + rule.getMaxLength() + " character" + (rule.getMaxLength() > 1 ? "s." : "."));
+            Utils.registerErrorOnValueOrTag(holder, tag, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_TAG.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
         }
 
         // Проверка на обязательность
         if (tagText.isEmpty() && rule.isRequired()){
-            Utils.registerErrorOnValueOrTag(holder, tag, "This tag value is required.");
+            Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.required"));
             return;
         }
 
@@ -231,19 +233,19 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
                 try{
                     Long.parseLong(tagText);
                 } catch (NumberFormatException e){
-                    Utils.registerErrorOnValueOrTag(holder, tag, "This tag value must be a number.");
+                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-number"));
                 }
             }
             // Проверка на 0, 1
             else if (Boolean.class.getTypeName().equals(rule.getType())){
                 if (!List.of("0", "1").contains(tagText)){
-                    Utils.registerErrorOnValueOrTag(holder, tag, "This tag value must be one of the following: [0, 1]");
+                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-boolean"));
                 }
             }
             // Проверка на дату
             else if (Date.class.getTypeName().equals(rule.getType())){
                 if (!Utils.isDate(tagText)){
-                    Utils.registerErrorOnValueOrTag(holder, tag, "This tag value must be a date.");
+                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-date"));
                 }
             }
         }
@@ -253,7 +255,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         if (!tagText.isEmpty()){
             List<String> availableValuesStrings = rule.getAvailableValues().stream().map(AvailableValue::getValue).toList();
             if (Utils.isNotEmpty(rule.getAvailableValues()) && !availableValuesStrings.contains(tagText)){
-                Utils.registerErrorOnValueOrTag(holder, tag, "This tag value must be one of the following: " + availableValuesStrings);
+                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-following", availableValuesStrings));
             }
         }
     }
@@ -274,7 +276,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         requiredTags.removeAll(childrenTags);
 
         if (!requiredTags.isEmpty()){
-            Utils.registerErrorOnElement(holder, parentTag, "This tag must include the following required tags: " + requiredTags);
+            Utils.registerErrorOnElement(holder, parentTag, Localization.message("tag.warn.must-include-required-tags", requiredTags));
         }
     }
 

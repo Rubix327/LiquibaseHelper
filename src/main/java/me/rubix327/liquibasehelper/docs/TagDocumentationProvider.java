@@ -6,14 +6,15 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.xml.XmlAttribute;
 import com.intellij.psi.xml.XmlTag;
-import me.rubix327.liquibasehelper.inspection.model.AvailableValue;
-import me.rubix327.liquibasehelper.settings.StaticSettings;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.RulesManager;
 import me.rubix327.liquibasehelper.inspection.XmlTagValuesInspector;
 import me.rubix327.liquibasehelper.inspection.model.AttributeRule;
+import me.rubix327.liquibasehelper.inspection.model.AvailableValue;
 import me.rubix327.liquibasehelper.inspection.model.TagRule;
 import me.rubix327.liquibasehelper.inspection.model.TagRulesContainer;
+import me.rubix327.liquibasehelper.locale.Localization;
+import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -76,9 +77,9 @@ public class TagDocumentationProvider implements DocumentationProvider {
         AttributeRule rule = AttributeRule.getSuitableAttributeRule(XmlTagValuesInspector.attributeRules, attribute);
         if (rule == null) return null;
 
-        if (rule.attributeTooltip == null) return null;
+        if (rule.getAttributeTooltip() == null) return null;
 
-        return rule.attributeTooltip;
+        return rule.getAttributeTooltip();
     }
 
     private String getTagTooltip(@NotNull XmlTag tag){
@@ -107,7 +108,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
         resultTooltip.append(Utils.isNotBlank(tagRulesContainer.getParentTagDescription()) ? "<br>" + tagRulesContainer.getParentTagDescription() : "");
         List<TagRule> tagRules = tagRulesContainer.getTagRules();
         if (tagRules != null && !tagRules.isEmpty()){
-            resultTooltip.append("<br><br>Возможные теги:");
+            resultTooltip.append("<br><br>").append(Localization.message("docs.available-tags"));
             TagRule.sortByImportance(tagRules);
             for (TagRule tagRule : tagRules) {
                 boolean required = tagRule.isRequired();
@@ -122,7 +123,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
         }
 
         if (Utils.isNotBlank(tagRulesContainer.getLinkToMetaClass())){
-            String link = Utils.getHtmlLink("class:" + tagRulesContainer.getLinkToMetaClass(), "Открыть мета-класс");
+            String link = Utils.getHtmlLink("class:" + tagRulesContainer.getLinkToMetaClass(), Localization.message("docs.open-meta-class"));
             resultTooltip.append("<br><br>").append(link);
         }
 
@@ -137,13 +138,14 @@ public class TagDocumentationProvider implements DocumentationProvider {
         if (rule.isExtendedTooltipInfo()){
             resultTooltip.append("<br>");
             if (rule.getMaxLength() != -1){
-                resultTooltip.append("<br>Макс. длина значения: ").append(rule.getMaxLength());
+                resultTooltip.append("<br>").append(Localization.message("docs.child-tag.max-length")).append(" ").append(rule.getMaxLength());
             }
             resultTooltip.append(getTypeTooltip(rule));
-            resultTooltip.append("<br>Обязателен: ").append(rule.isRequired() ? "Да" : "Нет");
+            resultTooltip.append("<br>").append(Localization.message("docs.child-tag.required")).append(" ")
+                    .append(Localization.message(rule.isRequired() ? "docs.yes" : "docs.no"));
             resultTooltip.append(getAvailableValuesTooltip(rule));
             if (Utils.isNotBlank(rule.getMetaClassPath())){
-                String link = Utils.getHtmlLink("field:" + rule.getLinkToMetaField(), "Открыть поле в мета-классе");
+                String link = Utils.getHtmlLink("field:" + rule.getLinkToMetaField(), Localization.message("docs.open-meta-field"));
                 resultTooltip.append("<br><br>").append(link);
             }
         }
@@ -152,9 +154,12 @@ public class TagDocumentationProvider implements DocumentationProvider {
     }
 
     private String getAvailableValuesTooltip(@NotNull TagRule tagRule){
-        StringBuilder builder = new StringBuilder("<br><br>Возможные значения:");
+        StringBuilder builder = new StringBuilder("<br><br>").append(Localization.message("docs.child-tag.available-values"));
         if (Boolean.class.getTypeName().equals(tagRule.getType())){
-            return builder.append("<br>• 0 - Нет").append("<br>• 1 - Да").toString();
+            return builder
+                    .append("<br>").append(Localization.message("docs.child-tag.required.no"))
+                    .append("<br>").append(Localization.message("docs.child-tag.required.yes"))
+                    .toString();
         } else if (Utils.isNotEmpty(tagRule.getAvailableValues())) {
             for (AvailableValue availableValue : tagRule.getAvailableValues()) {
                 builder.append("<br>• ").append(availableValue.getValue());
@@ -174,9 +179,9 @@ public class TagDocumentationProvider implements DocumentationProvider {
         if (type.equals(String.class.getTypeName())) return "";
         if (type.equals(Boolean.class.getTypeName())) return "";
 
-        StringBuilder builder = new StringBuilder("<br>Тип: ");
-        if (type.equals(Long.class.getTypeName())) builder.append("Целое число");
-        if (type.equals(Date.class.getTypeName())) builder.append("Дата");
+        StringBuilder builder = new StringBuilder("<br>").append(Localization.message("docs.child-tag.type")).append(" ");
+        if (type.equals(Long.class.getTypeName())) builder.append(Localization.message("docs.child-tag.type.integer"));
+        if (type.equals(Date.class.getTypeName())) builder.append(Localization.message("docs.child-tag.type.date"));
         return builder.toString();
     }
 

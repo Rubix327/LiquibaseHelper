@@ -1,4 +1,4 @@
-package me.rubix327.liquibasehelper.settings;
+package me.rubix327.liquibasehelper.form;
 
 import com.intellij.ui.components.JBCheckBox;
 import org.jetbrains.annotations.Nullable;

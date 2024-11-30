@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
 import lombok.Getter;
 import lombok.Setter;
+import me.rubix327.liquibasehelper.locale.Locale;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -19,6 +20,7 @@ public class PersistentUserSettings implements PersistentStateComponent<Persiste
     public boolean enableDocumentation = true;
     public boolean enableTagAutoCompletion = true;
     public boolean enableSettingsMenu = true;
+    public Locale locale = Locale.RU;
 
     @Override
     public PersistentUserSettings getState() {
@@ -39,6 +41,12 @@ public class PersistentUserSettings implements PersistentStateComponent<Persiste
         StaticSettings.ENABLE_DOCUMENTATION = enableDocumentation;
         StaticSettings.ENABLE_TAG_AUTO_COMPLETION = enableTagAutoCompletion;
         StaticSettings.ENABLE_SETTINGS_MENU = enableSettingsMenu;
+        changeLanguage(locale);
+    }
+
+    public void changeLanguage(Locale locale){
+        StaticSettings.LOCALE = locale;
+        java.util.Locale.setDefault(new java.util.Locale(locale.getName()));
     }
 
     public void resetDynamicSettings(){
@@ -49,16 +57,18 @@ public class PersistentUserSettings implements PersistentStateComponent<Persiste
         enableDocumentation = StaticSettings.ENABLE_DOCUMENTATION;
         enableTagAutoCompletion = StaticSettings.ENABLE_TAG_AUTO_COMPLETION;
         enableSettingsMenu = StaticSettings.ENABLE_SETTINGS_MENU;
+        locale = StaticSettings.LOCALE;
     }
 
     @Override
     public String toString() {
         return "enableReferences=" + enableReferences +
-                "\n enableBackReferences=" + enableBackReferences +
-                "\n enableNotLoadedNotifications=" + enableNotLoadedNotifications +
-                "\n enableInspections=" + enableInspections +
-                "\n enableDocumentation=" + enableDocumentation +
-                "\n enableTagAutoCompletion=" + enableTagAutoCompletion +
-                "\n enableSettingsMenu=" + enableSettingsMenu;
+                "\nenableBackReferences=" + enableBackReferences +
+                "\nenableNotLoadedNotifications=" + enableNotLoadedNotifications +
+                "\nenableInspections=" + enableInspections +
+                "\nenableDocumentation=" + enableDocumentation +
+                "\nenableTagAutoCompletion=" + enableTagAutoCompletion +
+                "\nenableSettingsMenu=" + enableSettingsMenu +
+                "\nlocale=" + locale.getName();
     }
 }

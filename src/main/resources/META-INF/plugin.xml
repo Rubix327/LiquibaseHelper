@@ -44,7 +44,7 @@
     <actions>
         <group id="LiquibaseHelper.Menu" text="LiquibaseHelper" description="LiquibaseHelper settings">
             <add-to-group group-id="MainMenu" anchor="last"/>
-            <action class="me.rubix327.liquibasehelper.settings.OpenSettingsAction" id="LiquibaseHelper.Actions.MenuAction" text="Settings..."/>
+            <action class="me.rubix327.liquibasehelper.form.OpenSettingsAction" id="LiquibaseHelper.Actions.MenuAction" text="Settings..."/>
         </group>
     </actions>
 

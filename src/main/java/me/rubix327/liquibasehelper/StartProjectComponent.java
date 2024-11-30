@@ -17,6 +17,7 @@ import me.rubix327.liquibasehelper.inspection.RulesManager;
 import me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse;
 import me.rubix327.liquibasehelper.listener.ClassDeletionListener;
 import me.rubix327.liquibasehelper.log.MainLogger;
+import me.rubix327.liquibasehelper.settings.PersistentUserSettings;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -39,6 +40,12 @@ public class StartProjectComponent implements ProjectComponent {
 
     @Override
     public void projectOpened() {
+        MainLogger.info(project, "Loading settings:");
+        PersistentUserSettings settings = project.getService(PersistentUserSettings.class);
+        for (String s : settings.toString().split("\n")) {
+            MainLogger.info(project, 1, s);
+        }
+
         registerClassDeletionListener(project);
 
         if (projectPathToArtifactId.get(project.getBasePath()) == null){
@@ -89,6 +96,7 @@ public class StartProjectComponent implements ProjectComponent {
             JavaPsiFacade javaPsiFacade = JavaPsiFacade.getInstance(project);
 
             // TODO вынести в настройки
+            // TODO добавить вложенные пакеты
             List<String> additionalPackages = List.of(
                     // cbscoreservices
                     "ru.athena.cbs.base.metaloader",
@@ -104,22 +112,18 @@ public class StartProjectComponent implements ProjectComponent {
             for (String additionalPackage : additionalPackages) {
                 PsiPackage psiPackage = javaPsiFacade.findPackage(additionalPackage);
                 if (psiPackage == null) {
-                    MainLogger.info(project, 1, "Dependency package \"%s\" was not found.", additionalPackage);
+                    MainLogger.info(project, 1, "Package \"%s\" was not found.", additionalPackage);
                     continue;
                 }
 
-                // TODO классы внутри вложенных пакетов не находятся
                 // TODO классы дублируются 3 раза.. почему?
-                PsiClass[] classesFromPackage = psiPackage.getClasses();
-                MainLogger.info(project, 1, "Dependency package \"%s\". Found classes:", additionalPackage);
-                for (PsiClass psiClass : classesFromPackage) {
-                    MainLogger.info(project, 2, "- %s", psiClass.getQualifiedName());
-                }
-                for (PsiClass aClass : classesFromPackage) {
-                    if (Utils.isNotDatamodelClass(aClass)) continue;
+                MainLogger.info(project, 1, "Package \"%s\".");
+                for (PsiClass aClass : psiPackage.getClasses()) {
+                    MainLogger.info(project, 2, "- %s", aClass.getQualifiedName());
                     HandleClassesResponse response = rulesManager.handleClassAndSuperClasses(aClass);
-                    MainLogger.info(project, 2, response.getMessage());
+                    MainLogger.info(project, 3, response.getMessage());
                 }
+
             }
             MainLogger.info(project, "Rules from dependencies have been registered.");
         } catch (Exception e){

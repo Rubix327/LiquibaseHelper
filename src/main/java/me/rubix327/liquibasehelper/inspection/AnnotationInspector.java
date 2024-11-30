@@ -9,6 +9,7 @@ import com.intellij.psi.util.PsiUtil;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.CbsAnnotation;
+import me.rubix327.liquibasehelper.locale.Localization;
 import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
 
@@ -40,13 +41,13 @@ public class AnnotationInspector extends LocalInspectionTool {
 
                 // Проверяем на внутренний класс и не обновляем его
                 if (psiClass.getContainingClass() != null){
-                    Utils.registerError(holder, annotation, "<html><b>@%s</b> is not supported on inner classes.</html>", CbsAnnotation.CbsDatamodelClass.SHORT_NAME);
+                    Utils.registerError(holder, annotation, Localization.message("class.warn.inner-classes", CbsAnnotation.CbsDatamodelClass.SHORT_NAME));
                     return;
                 }
 
                 // Не обновляем класс, если его название не совпадает с названием файла, в котором он находится
                 if (Utils.isClassAndFileNamesNotMatch(psiClass)){
-                    Utils.registerError(holder, annotation, "<html>This class will not be loaded as <b>@%s</b> unless its name matches the file name.</html>", CbsAnnotation.CbsDatamodelClass.SHORT_NAME);
+                    Utils.registerError(holder, annotation, Localization.message("class.warn.class-name-not-match", CbsAnnotation.CbsDatamodelClass.SHORT_NAME));
                     return;
                 }
 
@@ -67,9 +68,8 @@ public class AnnotationInspector extends LocalInspectionTool {
                         String anotherClass = classes.get(0); // Получаем первый попавшийся класс
                         instance.removeRulesByTagName(realDatamodelName); // Удаляем все правила этого datamodelName
                         Utils.registerError(holder, annotation,
-                                "<html>Value <b>%s</b> is already used by class %s." +
-                                "<br>These classes will not be loaded unless you change the value on one of them.</html>",
-                                realDatamodelName, Utils.getHtmlLink(anotherClass, anotherClass));
+                                Localization.message("class.warn.already-defined",
+                                realDatamodelName, Utils.getHtmlLink(anotherClass, anotherClass)));
                         return;
                     }
                 }
@@ -137,7 +137,7 @@ public class AnnotationInspector extends LocalInspectionTool {
         PsiClass psiClass = field.getContainingClass();
         if (psiClass != null){
             if (Utils.findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE) == null){
-                Utils.registerError(holder, annotation, "This field won't be checked since the class is not annotated with @%s.", CbsAnnotation.CbsDatamodelClass.SHORT_NAME);
+                Utils.registerError(holder, annotation, Localization.message("field.warn.class-not-annotated", CbsAnnotation.CbsDatamodelClass.SHORT_NAME));
             }
         }
 
@@ -155,7 +155,7 @@ public class AnnotationInspector extends LocalInspectionTool {
             PsiClass enumClass = PsiUtil.resolveClassInType(availableValuesEnumClass);
 
             if (enumClass == null || !enumClass.isEnum()) {
-                Utils.registerError(holder, availableValuesEnumMember, "<html>Value of <b>%s</b> must be an enumeration.</html>", AVAILABLE_VALUES_ENUM);
+                Utils.registerError(holder, availableValuesEnumMember, Localization.message("field.warn.available-values-enum.must-be-enumeration", AVAILABLE_VALUES_ENUM));
             } else {
                 availableValuesDeclaredParams.add(AVAILABLE_VALUES_ENUM);
             }
@@ -170,17 +170,17 @@ public class AnnotationInspector extends LocalInspectionTool {
                 } else if (enumClass.isEnum()) { // Класс найден, и это енум
                     availableValuesDeclaredParams.add(AVAILABLE_VALUES_ENUM_PATH);
                 } else { // Класс найден, но это не енум
-                    Utils.registerError(holder, availableValuesEnumPathLiteral, "<html>Value of <b>%s</b> must be a qualified name of an enumeration.</html>", AVAILABLE_VALUES_ENUM_PATH);
+                    Utils.registerError(holder, availableValuesEnumPathLiteral, Localization.message("field.warn.available-values-enum-path.must-be-qname", AVAILABLE_VALUES_ENUM_PATH));
                 }
             }
         }
 
         // Проверка на то, что availableValues, availableValuesEnum и availableValuesEnumPath не заполнены одновременно
         if (availableValuesDeclaredParams.size() > 1) {
-            StringBuilder errorBuilder = new StringBuilder("<html>Fields ");
-            String errorFields = String.join(" and ", availableValuesDeclaredParams.stream().map(e -> "<b>" + e + "</b>").toList());
-            errorBuilder.append(errorFields).append(" must not be declared at the same time.</html>");
-            Utils.registerError(holder, annotation, errorBuilder.toString());
+            String delimiter = " " + Localization.message("common.and.small") + " ";
+            String errorFields = String.join(delimiter, availableValuesDeclaredParams.stream().map(e -> "<b>" + e + "</b>").toList());
+            String msg = Localization.message("field.warn.available-values.must-not-declared-same-time", errorFields);
+            Utils.registerError(holder, annotation, msg);
             return;
         }
 
@@ -189,11 +189,11 @@ public class AnnotationInspector extends LocalInspectionTool {
             PsiType mustType = typeValue.getOperand().getType();
             PsiClass mustTypeClass = PsiUtil.resolveClassInType(mustType);
             if (mustTypeClass != null && !isClassOfAnyType(mustTypeClass, String.class, Long.class, Boolean.class, Date.class)){
-                Utils.registerError(holder, type, "<html>Field <b>%s</b> must be one of the following: [String.class, Long.class, Boolean.class, Date.class]</html>", TYPE);
+                Utils.registerError(holder, type, Localization.message("field.warn.type.available-types", TYPE));
             }
             if (mustTypeClass != null && Boolean.class.getTypeName().equals(mustTypeClass.getQualifiedName())){
                 if (!availableValuesDeclaredParams.isEmpty()){
-                    Utils.registerError(holder, annotation, "<html>Fields <b>type=Boolean.class</b> and %s must not be declared at the same time.</html>", availableValuesDeclaredParams.get(0));
+                    Utils.registerError(holder, annotation, Localization.message("field.warn.type-boolean.must-not-declared-with", availableValuesDeclaredParams.get(0)));
                 }
             }
         }

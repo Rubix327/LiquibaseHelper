@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.rubix327"
-version = "1.0.16"
+version = "1.0.17"
 
 repositories {
     mavenCentral()
@@ -31,6 +31,7 @@ tasks {
         sourceCompatibility = "17"
         targetCompatibility = "17"
         options.annotationProcessorPath = configurations["annotationProcessor"]
+        options.encoding = "UTF-8"
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         kotlinOptions.jvmTarget = "17"
