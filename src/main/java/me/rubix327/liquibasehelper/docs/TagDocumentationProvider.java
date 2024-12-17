@@ -181,6 +181,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
 
         StringBuilder builder = new StringBuilder("<br>").append(Localization.message("docs.child-tag.type")).append(" ");
         if (type.equals(Long.class.getTypeName())) builder.append(Localization.message("docs.child-tag.type.integer"));
+        if (type.equals(Double.class.getTypeName())) builder.append(Localization.message("docs.child-tag.type.double"));
         if (type.equals(Date.class.getTypeName())) builder.append(Localization.message("docs.child-tag.type.date"));
         return builder.toString();
     }

@@ -42,7 +42,8 @@ public @interface CbsDatamodelField {
      * Если массив пустой, то тег по этому признаку не проверяется.<br><br>
      * Если это поле в аннотации объявлено вместе с {@link #availableValuesEnum()},
      * то тег проверяется только по значениям availableValuesEnum.
-     * @see #availableValuesEnum
+     * @see #availableValuesEnum() Заполнение через ссылку на перечисление
+     * @see #availableValuesEnumPath() Заполнение через полный путь до перечисления
      */
     String[] availableValues() default "";
 
@@ -59,6 +60,8 @@ public @interface CbsDatamodelField {
      *     <li>Из java-поля value, объявленного внутри enumeration вместе с подходящим конструктором</li>
      *     <li>Берется название самого поля, как есть</li>
      * </ol>
+     * @see #availableValues() Заполнение в виде строки или массива строк
+     * @see #availableValuesEnumPath() Заполнение через полный путь до перечисления
      */
     Class<?> availableValuesEnum() default Object.class;
 
@@ -78,17 +81,20 @@ public @interface CbsDatamodelField {
      *     <li>Из java-поля value, объявленного внутри enumeration вместе с подходящим конструктором</li>
      *     <li>Берется название самого поля, как есть</li>
      * </ol>
+     * @see #availableValues() Заполнение в виде строки или массива строк
+     * @see #availableValuesEnum() Заполнение через ссылку на перечисление
      */
     String availableValuesEnumPath() default "";
 
     /**
      * Тип значения тега.<br><br>
-     * Может быть четырех видов: String, Long, Boolean, Date.<br>
+     * Может быть пяти видов: String, Long, Double, Boolean, Date.<br>
      * <ul>
      *     <li>Если указано String, то значение тега никак не проверяется.</li>
-     *     <li>Если указано Long, значение проверяется путем парсинга числа из него.</li>
+     *     <li>Если указано Long, значение проверяется путем парсинга целого числа.</li>
+     *     <li>Если указано Double, значение проверяется путем парсинга числа с плавающей точкой.</li>
      *     <li>Если указано Boolean, значение может быть только 0 или 1.</li>
-     *     <li>Если указано Date, значение должно быть в формате даты (</li>
+     *     <li>Если указано Date, значение должно быть в формате даты</li>
      * </ul>
      */
     Class<?> type() default String.class;

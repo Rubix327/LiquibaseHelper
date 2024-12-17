@@ -228,12 +228,20 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         }
 
         if (!tagText.isEmpty()){
-            // Проверка на число
+            // Проверка на целое число
             if (Long.class.getTypeName().equals(rule.getType())){
                 try{
                     Long.parseLong(tagText);
                 } catch (NumberFormatException e){
-                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-number"));
+                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-integer"));
+                }
+            }
+            // Проверка на число с плавающей точкой
+            if (Double.class.getTypeName().equals(rule.getType())){
+                try{
+                    Double.parseDouble(tagText);
+                } catch (NumberFormatException e){
+                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-double"));
                 }
             }
             // Проверка на 0, 1

@@ -238,13 +238,9 @@ public class RulesManager {
             if (type instanceof PsiClassObjectAccessExpression typeValue){
                 PsiType mustType = typeValue.getOperand().getType();
                 PsiClass mustTypeClass = PsiUtil.resolveClassInType(mustType);
-                if (mustTypeClass != null && AnnotationInspector.isClassOfAnyType(mustTypeClass, String.class, Long.class, Boolean.class, Date.class)){
+                if (mustTypeClass != null && AnnotationInspector.isClassOfAnyType(mustTypeClass, String.class, Long.class, Double.class, Boolean.class, Date.class)){
                     tagRule.setType(mustTypeClass.getQualifiedName());
                 }
-//                if (mustTypeClass != null && List.of(String.class.getName(), Long.class.getName(), Boolean.class.getName(), Date.class.getName())
-//                        .contains(mustTypeClass.getQualifiedName())){
-//                    tagRule.setType(mustTypeClass.getQualifiedName());
-//                }
             }
 
             // Если тип Boolean, то заполнять возможные значения не требуется

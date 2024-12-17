@@ -188,7 +188,7 @@ public class AnnotationInspector extends LocalInspectionTool {
         if (type instanceof PsiClassObjectAccessExpression typeValue){
             PsiType mustType = typeValue.getOperand().getType();
             PsiClass mustTypeClass = PsiUtil.resolveClassInType(mustType);
-            if (mustTypeClass != null && !isClassOfAnyType(mustTypeClass, String.class, Long.class, Boolean.class, Date.class)){
+            if (mustTypeClass != null && !isClassOfAnyType(mustTypeClass, String.class, Long.class, Double.class, Boolean.class, Date.class)){
                 Utils.registerError(holder, type, Localization.message("field.warn.type.available-types", TYPE));
             }
             if (mustTypeClass != null && Boolean.class.getTypeName().equals(mustTypeClass.getQualifiedName())){
