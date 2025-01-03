@@ -35,6 +35,14 @@
                          displayName="AnnotationInspector"
                          shortName="AnnotationInspector"
                          groupName="Java checks"/>
+        <localInspection language="JAVA" implementationClass="me.rubix327.liquibasehelper.inspection.ProcessVariablesInspector"
+                         groupBundle="messages.InspectionsBundle"
+                         groupKey="group.names.probable.bugs"
+                         enabledByDefault="true"
+                         runForWholeFile="true"
+                         displayName="ProcessVariablesInspector"
+                         shortName="ProcessVariablesInspector"
+                         groupName="Java checks"/>
         <documentationProvider implementation="me.rubix327.liquibasehelper.docs.TagDocumentationProvider"/>
         <completion.contributor implementationClass="me.rubix327.liquibasehelper.completion.TagCompletionContributor" language="XML"/>
         <refactoring.elementListenerProvider implementation="me.rubix327.liquibasehelper.listener.ClassRenameRefactoringListener" />

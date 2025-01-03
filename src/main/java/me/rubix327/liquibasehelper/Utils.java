@@ -1,5 +1,7 @@
 package me.rubix327.liquibasehelper;
 
+import com.intellij.codeInspection.LocalQuickFix;
+import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileEditorManager;
@@ -283,14 +285,14 @@ public class Utils {
     }
 
     /**
-     * Проверить, что у класса есть аннотация @CbsDatamodelClass.<br>
-     * Если этот метод возвращает true, то это гарантирует, что:<ul>
-     * <li>Указанный psiClass не null</li>
-     * <li>У указанного psiClass есть qualifiedName</li>
-     * <li>Указанный psiClass находится в пакете metaloader</li>
-     * <li>Указанный psiClass не вложен в другие классы</li>
-     * <li>Указанный psiClass не является перечислением (enum)</li>
-     * <li>Над указанным psiClass есть аннотация @CbsDatamodelClass</li>
+     * Проверить, что класс не является CbsDatamodelClass.<br>
+     * Если этот метод возвращает true, то это гарантирует, что как минимум одно из следующих условий верно:<ul>
+     * <li>Указанный psiClass == null</li>
+     * <li>У указанного psiClass нет qualifiedName</li>
+     * <li>Указанный psiClass не находится в пакете metaloader</li>
+     * <li>Указанный psiClass вложен в другие классы</li>
+     * <li>Указанный psiClass является перечислением (enum)</li>
+     * <li>Над указанным psiClass нет аннотации @CbsDatamodelClass</li>
      * </ul>
      */
     public static boolean isNotDatamodelClass(@Nullable PsiClass psiClass){
@@ -369,12 +371,16 @@ public class Utils {
         return null; // Если не нашли значимых строк
     }
 
-    public static void registerError(ProblemsHolder holder, PsiElement element, String errorText){
-        holder.registerProblem(element, errorText, ERRORS_HIGHLIGHT_TYPE);
-    }
-
     public static void registerError(ProblemsHolder holder, PsiElement element, String errorText, Object... args){
         holder.registerProblem(element, String.format(errorText, args), ERRORS_HIGHLIGHT_TYPE);
+    }
+
+    public static void registerError(ProblemsHolder holder, ProblemHighlightType highlightType, PsiElement element, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), highlightType);
+    }
+
+    public static void registerError(ProblemsHolder holder, ProblemHighlightType highlightType, LocalQuickFix quickFix, PsiElement element, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), highlightType, quickFix);
     }
 
     public static void registerErrorOnElement(ProblemsHolder holder, XmlTag tag, String errorText){
