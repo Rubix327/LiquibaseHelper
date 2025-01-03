@@ -92,8 +92,10 @@ public class AnnotationInspector extends LocalInspectionTool {
                     MainLogger.info(instance.getProject(), "Classes using enum %s: %s", psiClass.getName(), classesToUpdate);
                     for (PsiClass classToUpdate : classesToUpdate) {
                         if (classToUpdate == null || !classToUpdate.isValid()) continue;
-                        // TODO нужно также обновлять дочерние классы
                         instance.handleClassAndSuperClasses(classToUpdate);
+                        for (PsiClass inheritor : getInheritors(classToUpdate, ".metaloader.")) {
+                            instance.handleClassAndSuperClasses(inheritor);
+                        }
                     }
                 }
             }

@@ -34,7 +34,7 @@ public class RulesManager {
     private final Map<PsiClass, Set<PsiClass>> enumsToClassesUsingThem = new HashMap<>(); // changed class -> classes to update
     /**
      * Регистр qualifiedName -> datamodelName.<br>
-     * Нужен для удаления мусорных правил во время изменения value у @CbsDatamodelClass
+     * Нужен для удаления мусорных правил во время изменения tag у @CbsDatamodelClass
      */
     private final Map<String, String> classToDatamodelValueRegistry = new HashMap<>(); // "me.rubix327.AccIntentionTreeMeta" -> "accIntentionTreeMeta"
 
@@ -415,8 +415,16 @@ public class RulesManager {
     public void removeRulesOfClass(@NotNull PsiClass psiClass){
         String datamodelName = getDatamodelNameOfClass(psiClass);
         parentToTagRulesContainer.remove(datamodelName);
-        MainLogger.info(psiClass.getProject(), "Удалены правила для тега %s (класс: %s)", datamodelName, psiClass.getName());
+        MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s)", datamodelName, psiClass.getName());
     }
+
+    public String removeRulesByTagName(String tagName){
+        TagRulesContainer container = parentToTagRulesContainer.get(tagName);
+        if (container != null){
+            String classPath = container.getLinkToMetaClass();
+            parentToTagRulesContainer.remove(tagName);
+            return classPath;
+        }
 
     public void removeRulesByTagName(String tagName){
         parentToTagRulesContainer.remove(tagName);
@@ -443,7 +451,7 @@ public class RulesManager {
         for (Map.Entry<String, TagRulesContainer> stringListEntry : parentToTagRulesContainer.entrySet()) {
             MainLogger.info(project, "%s -> %s", stringListEntry.getKey(), stringListEntry.getValue());
         }
-        MainLogger.info(project, "--------------------------");
+        MainLogger.info(project, "---------------------------");
     }
 
     public Set<PsiClass> getClassesUsingThisEnum(PsiClass usedEnum){

@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiTreeUtil;
 import me.rubix327.liquibasehelper.StartProjectComponent;
+import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.RulesManager;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.CbsAnnotation;
@@ -77,7 +78,7 @@ public class ClassDeletionListener implements PsiTreeChangeListener {
     }
 
     private void onClassRemoved(RulesManager rulesManager, PsiClass removedClass){
-        if (removedClass.getContainingClass() != null) return;
+        if (Utils.isNotDatamodelClass(removedClass)) return;
         rulesManager.removeRulesOfClass(removedClass);
         rulesManager.removeClassReferencesFromEnums(removedClass);
     }

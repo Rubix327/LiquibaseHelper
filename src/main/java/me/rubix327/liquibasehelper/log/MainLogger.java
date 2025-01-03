@@ -1,6 +1,7 @@
 package me.rubix327.liquibasehelper.log;
 
 import com.intellij.openapi.project.Project;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.util.logging.FileHandler;
@@ -21,42 +22,42 @@ public class MainLogger {
         }
     }
 
-    public static void info(Project project, int offset, String s, Object... args){
+    public static void info(@NotNull Project project, int offset, @NotNull String s, Object... args){
         String offsetStr = "  ".repeat(offset);
         String result = String.format("[%s] ", project.getName()) + offsetStr + String.format(s, args);
         System.out.println(result);
         LOGGER.info(result);
     }
 
-    public static void info(Project project, String s, Object... args){
+    public static void info(@NotNull Project project, @NotNull String s, Object... args){
         info(project, 0, s, args);
     }
 
-    public static void info(String s, Object... args){
+    public static void info(@NotNull String s, Object... args){
         String result = String.format(s, args);
         System.out.println(result);
         LOGGER.info(result);
     }
 
-    public static void warn(Project project, String s, Object... args){
+    public static void warn(@NotNull Project project, @NotNull String s, Object... args){
         String result = String.format("[%s] ", project.getName()) + String.format(s, args);
         System.out.println(result);
         LOGGER.warning(result);
     }
 
-    public static void warn(String s, Object... args){
+    public static void warn(@NotNull String s, Object... args){
         String result = String.format(s, args);
         System.out.println(result);
         LOGGER.warning(result);
     }
 
-    public static void error(Project project, String s, Object... args){
+    public static void error(@NotNull Project project, @NotNull String s, Object... args){
         String result = String.format("[%s] ", project.getName()) + String.format(s, args);
         System.out.println(result);
         LOGGER.severe(result);
     }
 
-    public static void error(String s, Object... args){
+    public static void error(@NotNull String s, Object... args){
         String result = String.format(s, args);
         System.out.println(result);
         LOGGER.severe(result);
