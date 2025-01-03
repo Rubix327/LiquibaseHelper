@@ -96,13 +96,16 @@ public class StartProjectComponent implements ProjectComponent {
             JavaPsiFacade javaPsiFacade = JavaPsiFacade.getInstance(project);
 
             // TODO вынести в настройки
-            // TODO добавить вложенные пакеты
             List<String> additionalPackages = List.of(
                     // cbscoreservices
-                    "ru.athena.cbs.base.metaloader",
-                    "ru.athena.cbs.coreservices.metaloader",
-                    "ru.athena.cbs.docengine.metaloader",
-                    "ru.athena.cbs.hibernate",
+                    "ru.athena.cbs.base.metaloader.metaentity",
+                    "ru.athena.cbs.base.metaloader.metaentity.addtitionalattributes",
+                    "ru.athena.cbs.coreservices.metaloader.entitylabels.metaentity",
+                    "ru.athena.cbs.coreservices.metaloader.enumeration.metaentity",
+                    "ru.athena.cbs.coreservices.metaloader.externaldocid.metaentity",
+                    "ru.athena.cbs.coreservices.metaloader.metaentity",
+                    "ru.athena.cbs.coreservices.metaloader.registrykey.metaentity",
+                    "ru.athena.cbs.coreservices.metaloader.userkey.metaentity",
                     // cbsdocengine
                     "ru.athena.cbs.docengine.metaloader.metaentity",
                     // cbsdocnumber
@@ -116,12 +119,10 @@ public class StartProjectComponent implements ProjectComponent {
                     continue;
                 }
 
-                // TODO классы дублируются 3 раза.. почему?
-                MainLogger.info(project, 1, "Package \"%s\".");
+                MainLogger.info(project, 1, "Package \"%s\"...", psiPackage.getQualifiedName());
                 for (PsiClass aClass : psiPackage.getClasses()) {
-                    MainLogger.info(project, 2, "- %s", aClass.getQualifiedName());
                     HandleClassesResponse response = rulesManager.handleClassAndSuperClasses(aClass);
-                    MainLogger.info(project, 3, response.getMessage());
+                    MainLogger.info(project, 2, response.getMessage());
                 }
 
             }
