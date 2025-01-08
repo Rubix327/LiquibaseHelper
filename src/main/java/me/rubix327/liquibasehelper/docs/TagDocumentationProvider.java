@@ -122,8 +122,8 @@ public class TagDocumentationProvider implements DocumentationProvider {
             }
         }
 
-        if (Utils.isNotBlank(tagRulesContainer.getLinkToMetaClass())){
-            String link = Utils.getHtmlLink("class:" + tagRulesContainer.getLinkToMetaClass(), Localization.message("docs.open-meta-class"));
+        if (Utils.isNotBlank(tagRulesContainer.getLinkToMetaClassWithOffset())){
+            String link = Utils.getHtmlLink("class:" + tagRulesContainer.getLinkToMetaClassWithOffset(), Localization.message("docs.open-meta-class"));
             resultTooltip.append("<br><br>").append(link);
         }
 
@@ -145,7 +145,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
                     .append(Localization.message(rule.isRequired() ? "docs.yes" : "docs.no"));
             resultTooltip.append(getAvailableValuesTooltip(rule));
             if (Utils.isNotBlank(rule.getMetaClassPath())){
-                String link = Utils.getHtmlLink("field:" + rule.getLinkToMetaField(), Localization.message("docs.open-meta-field"));
+                String link = Utils.getHtmlLink("field:" + rule.getLinkToMetaFieldWithOffset(), Localization.message("docs.open-meta-field"));
                 resultTooltip.append("<br><br>").append(link);
             }
         }

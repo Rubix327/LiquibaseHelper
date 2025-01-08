@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 
 import static me.rubix327.liquibasehelper.settings.CbsAnnotation.*;
+import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.*;
 
 public class RulesManager {
 
@@ -23,17 +24,17 @@ public class RulesManager {
      */
     private static final Map<String, RulesManager> instances = new HashMap<>();
     /**
-     * Регистр правил, привязанных к datamodelName.<br>
+     * Реестр правил, привязанных к datamodelName.<br>
      * Нужен для быстрого нахождения списка правил определенного тега во время парсинга xml-файла.
      */
-    private final Map<String, TagRulesContainer> parentToTagRulesContainer = new HashMap<>(); // "accIntentionTreeMeta" -> TagRulesContainer
+    private final Map<String, Set<TagRulesContainer>> parentToTagRulesContainer = new HashMap<>(); // "accIntentionTreeMeta" -> TagRulesContainer
     /**
-     * Регистр классов-перечислений к классам @CbsDatamodelClass, которые их используют.<br>
+     * Реестр классов-перечислений к классам @CbsDatamodelClass, которые их используют.<br>
      * Нужен для обновления правил после изменения enum-а.
      */
     private final Map<PsiClass, Set<PsiClass>> enumsToClassesUsingThem = new HashMap<>(); // changed class -> classes to update
     /**
-     * Регистр qualifiedName -> datamodelName.<br>
+     * Реестр qualifiedName -> datamodelName.<br>
      * Нужен для удаления мусорных правил во время изменения tag у @CbsDatamodelClass
      */
     private final Map<String, String> classToDatamodelValueRegistry = new HashMap<>(); // "me.rubix327.AccIntentionTreeMeta" -> "accIntentionTreeMeta"
@@ -75,15 +76,15 @@ public class RulesManager {
     public HandleClassesResponse handleClassAndSuperClasses(@NotNull PsiClass psiClass) {
         // Если класс == null или у него нет аннотации @CbsDatamodelClass
         if (Utils.isNotDatamodelClass(psiClass)){
-            return HandleClassesResponse.makeErrorResponse(psiClass, "Skipping class {class} (not a datamodel class).");
+            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_NOT_DATAMODEL, "Skipping class {class} (not a datamodel class).");
         }
         // Если класс mapped, то пропускаем (такой класс только встраивает свои правила внутрь дочерних)
         if (Utils.isDatamodelMappedClass(psiClass)){
-            return HandleClassesResponse.makeErrorResponse(psiClass, "Skipping class {class} (the class is mapped).");
+            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_MAPPED, "Skipping class {class} (the class is mapped).");
         }
         // Если класс вложенный
         if (Utils.isClassAndFileNamesNotMatch(psiClass)) {
-            return HandleClassesResponse.makeErrorResponse(psiClass, "Skipping class {class} (the class is inner).");
+            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_INNER, "Skipping class {class} (the class is inner).");
         }
 
         List<TagRule> rulesFromClass = getRulesFromFields(psiClass);
@@ -92,23 +93,40 @@ public class RulesManager {
         List<TagRule> rulesFromClassAndSuperClasses = getRulesFromSuperClasses(psiClass, rulesFromClass);
         String datamodelNameOfClass = getDatamodelNameOfClass(psiClass);
 
-        if (psiClass.getQualifiedName() != null && datamodelNameOfClass != null){
-            putDatamodelValueToRegistry(psiClass.getQualifiedName(), datamodelNameOfClass);
+        String thisClassQualifiedName = psiClass.getQualifiedName();
+        if (thisClassQualifiedName == null){
+            return makeErrorResponse(psiClass, ErrorReason.CANNOT_GET_QUALIFIED_NAME, "Skipping class {class} (could not get qualified name of class).");
+        }
+        if (datamodelNameOfClass == null){
+            return makeErrorResponse(psiClass, ErrorReason.CANNOT_GET_DATAMODEL_TAG, "Skipping class {class} (could not get datamodel tag of class).");
         }
 
-        parentToTagRulesContainer.put(datamodelNameOfClass, new TagRulesContainer()
+        putDatamodelValueToRegistry(psiClass.getQualifiedName(), datamodelNameOfClass);
+        addRules(datamodelNameOfClass, new TagRulesContainer()
                 .setParentTagName(datamodelNameOfClass)
                 .setTagRules(rulesFromClassAndSuperClasses)
                 .setParentTagTooltip(Utils.getCbsDatamodelClassAnnotationFieldValue(psiClass, CbsDatamodelClass.Fields.COMMENT))
                 .setParentTagDescription(Utils.getCbsDatamodelClassAnnotationFieldValue(psiClass, CbsDatamodelClass.Fields.DESCRIPTION))
-                .setLinkToMetaClass(psiClass.getQualifiedName())
-                .setLinkToClassNameOffset(psiClass.getTextOffset())
+                .setClassPath(psiClass.getQualifiedName())
+                .setClassNameOffset(psiClass.getTextOffset())
         );
 
         return new HandleClassesResponse(psiClass).setSuccess(true)
-                .setMessage("Registered rules for class {class}: %s (base: %s, super: %s)",
+                .setMessage("- {class} (%s): %s (base: %s, super: %s)",
+                        datamodelNameOfClass,
                         rulesFromClassAndSuperClasses.size(), rulesFromClass.size(),
                         rulesFromClassAndSuperClasses.size() - rulesFromClass.size());
+    }
+
+    private void addRules(@NotNull String datamodelName, TagRulesContainer rules){
+        Set<TagRulesContainer> rulesFromClass = parentToTagRulesContainer.get(datamodelName);
+        if (rulesFromClass == null){
+            Set<TagRulesContainer> rulesSet = new HashSet<>(Set.of(rules));
+            parentToTagRulesContainer.put(datamodelName, rulesSet);
+        } else {
+            rulesFromClass.remove(rules);
+            rulesFromClass.add(rules);
+        }
     }
 
     /**
@@ -418,24 +436,40 @@ public class RulesManager {
         MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s)", datamodelName, psiClass.getName());
     }
 
-    public String removeRulesByTagName(String tagName){
-        TagRulesContainer container = parentToTagRulesContainer.get(tagName);
-        if (container != null){
-            String classPath = container.getLinkToMetaClass();
-            parentToTagRulesContainer.remove(tagName);
-            return classPath;
+    public void removeRulesByTagNameAndClass(String classQualifiedName, String tagName){
+        Set<TagRulesContainer> tagContainers = new HashSet<>(parentToTagRulesContainer.get(tagName));
+        for (TagRulesContainer tagContainer : tagContainers) {
+            if (classQualifiedName.equals(tagContainer.getMetaClassPath())){
+                if (parentToTagRulesContainer.get(tagName).size() == 1){
+                    // Удаляем весь маппинг, чтобы не оставалось пустых
+                    parentToTagRulesContainer.remove(tagName);
+                } else {
+                    // Удаляем только ту привязку, которую надо удалить
+                    parentToTagRulesContainer.get(tagName).remove(tagContainer);
+                }
+            }
         }
+    }
 
-    public void removeRulesByTagName(String tagName){
-        parentToTagRulesContainer.remove(tagName);
+    public List<TagRulesContainer> getRulesContainerListByTagName(String tagName){
+        return new ArrayList<>(parentToTagRulesContainer.get(tagName));
     }
 
     public TagRulesContainer getRulesContainerByTagName(String tagName){
-        return parentToTagRulesContainer.get(tagName);
+        Set<TagRulesContainer> tagRules = parentToTagRulesContainer.get(tagName);
+        if (tagRules == null || tagRules.size() > 1){
+            return null;
+        }
+        return new ArrayList<>(tagRules).get(0);
     }
 
     public Collection<TagRulesContainer> getAllRulesContainers(){
-        return parentToTagRulesContainer.values();
+        Collection<TagRulesContainer> result = new ArrayList<>();
+        for (Set<TagRulesContainer> value : parentToTagRulesContainer.values()) {
+            if (value == null || value.size() > 1) continue;
+            result.add(new ArrayList<>(value).get(0));
+        }
+        return result;
     }
 
     @SuppressWarnings("unused")
@@ -448,8 +482,8 @@ public class RulesManager {
     @SuppressWarnings("unused")
     public void printAllRules(){
         MainLogger.info(project, "---------- Rules ----------");
-        for (Map.Entry<String, TagRulesContainer> stringListEntry : parentToTagRulesContainer.entrySet()) {
-            MainLogger.info(project, "%s -> %s", stringListEntry.getKey(), stringListEntry.getValue());
+        for (Map.Entry<String, Set<TagRulesContainer>> stringListEntry : parentToTagRulesContainer.entrySet()) {
+            MainLogger.info(project, "%s (count %s) -> %s", stringListEntry.getKey(), stringListEntry.getValue().size(), stringListEntry.getValue());
         }
         MainLogger.info(project, "---------------------------");
     }

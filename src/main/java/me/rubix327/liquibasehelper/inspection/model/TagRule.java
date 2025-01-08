@@ -37,7 +37,7 @@ public class TagRule {
         return null;
     }
 
-    public String getLinkToMetaField(){
+    public String getLinkToMetaFieldWithOffset(){
         return metaClassPath + ":" + metaFieldOffset;
     }
 
@@ -60,8 +60,8 @@ public class TagRule {
                 ", required=" + isRequired +
                 ", availableValues=" + availableValues +
                 ", tagTooltip='" + tagTooltip + '\'' +
-                ", metaClassPath='" + metaClassPath + '\'' +
-                ", metaFieldOffset=" + metaFieldOffset +
+                ", classPath='" + metaClassPath + '\'' +
+                ", fieldOffset=" + metaFieldOffset +
                 '}';
     }
 }

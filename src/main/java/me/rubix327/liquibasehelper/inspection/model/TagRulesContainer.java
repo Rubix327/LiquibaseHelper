@@ -1,6 +1,8 @@
 package me.rubix327.liquibasehelper.inspection.model;
 
+import com.google.common.base.Objects;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
@@ -10,12 +12,12 @@ public class TagRulesContainer {
     private String parentTagName;
     private String parentTagTooltip;
     private String parentTagDescription;
-    private String linkToMetaClass;
-    private int linkToClassNameOffset = 0;
+    private String metaClassPath;
+    private int metaClassNameOffset = 0;
     private List<TagRule> tagRules;
 
-    public String getLinkToMetaClass() {
-        return linkToMetaClass + ":" + linkToClassNameOffset;
+    public String getLinkToMetaClassWithOffset(){
+        return metaClassPath + ":" + metaClassNameOffset;
     }
 
     public TagRulesContainer setParentTagName(String parentTagName) {
@@ -33,13 +35,13 @@ public class TagRulesContainer {
         return this;
     }
 
-    public TagRulesContainer setLinkToMetaClass(String linkToMetaClass) {
-        this.linkToMetaClass = linkToMetaClass;
+    public TagRulesContainer setClassPath(String metaClassPath) {
+        this.metaClassPath = metaClassPath;
         return this;
     }
 
-    public TagRulesContainer setLinkToClassNameOffset(int linkToClassNameOffset) {
-        this.linkToClassNameOffset = linkToClassNameOffset;
+    public TagRulesContainer setClassNameOffset(int classNameOffset) {
+        this.metaClassNameOffset = classNameOffset;
         return this;
     }
 
@@ -51,7 +53,20 @@ public class TagRulesContainer {
     @Override
     public String toString() {
         return "parentTagTooltip='" + parentTagTooltip + '\'' +
-                ", metaClassPath='" + linkToMetaClass + '\'' +
+                ", classPath='" + metaClassPath + '\'' +
                 ", tagRules=" + tagRules;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+        TagRulesContainer container = (TagRulesContainer) object;
+        return Objects.equal(parentTagName, container.parentTagName) && Objects.equal(metaClassPath, container.metaClassPath);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(parentTagName, metaClassPath);
     }
 }

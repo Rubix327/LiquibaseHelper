@@ -20,10 +20,10 @@ import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.PersistentUserSettings;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.ErrorReason.*;
 
 public class StartProjectComponent implements ProjectComponent {
 
@@ -76,17 +76,45 @@ public class StartProjectComponent implements ProjectComponent {
         rulesManagerInstance.resetAll();
         Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
 
-        MainLogger.info(project, "Registering project-level rules... (found classes: %s)", allClasses);
+        List<HandleClassesResponse> skippedResponses = new ArrayList<>();
+        MainLogger.info(project, "Registering project-level rules...");
+        MainLogger.info(project, 1, "Registered rules for classes:");
         for (PsiClass psiClass : allClasses) {
             HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass);
-            MainLogger.info(project, 1, response.getMessage());
+            if (response.isSuccess()){
+                MainLogger.info(project, 2, response.getMessage());
+            } else {
+                skippedResponses.add(response);
+            }
         }
+
+        if (!skippedResponses.isEmpty()){
+            MainLogger.info(project, 1, "Skipped classes (%s):", skippedResponses.size());
+        }
+        logSkippedClasses(project, skippedResponses, CLASS_IS_NOT_DATAMODEL, "- Not datamodel classes ({count}): {classes}");
+        logSkippedClasses(project, skippedResponses, CLASS_IS_MAPPED, "- Mapped classes ({count}): {classes}");
+        logSkippedClasses(project, skippedResponses, CLASS_IS_INNER, "- Inner classes ({count}): {classes}");
+        logSkippedClasses(project, skippedResponses, CANNOT_GET_QUALIFIED_NAME, "- Could not get qualified name ({count}): {classes}");
+        logSkippedClasses(project, skippedResponses, CANNOT_GET_DATAMODEL_TAG, "- Could not get datamodel tag ({count}): {classes}");
 
         ClassDeletionListener.unregisterProjectRulesUpdate(project);
         MainLogger.info(project, "Project-level rules have been registered.");
 
         registerRulesFromDependencies(rulesManagerInstance);
         rulesManagerInstance.printAllRules();
+    }
+
+    private static void logSkippedClasses(Project project, List<HandleClassesResponse> responses, HandleClassesResponse.ErrorReason errorReason, String msg){
+        Set<String> skipped = responses.stream()
+                .filter(r -> r.getErrorReason() == errorReason)
+                .map(r -> r.getBaseClass().getName())
+                .collect(Collectors.toSet());
+        if (Utils.isNotEmpty(skipped)){
+            MainLogger.info(project, 2, msg
+                    .replace("{count}", String.valueOf(skipped.size()))
+                    .replace("{classes}", String.valueOf(skipped))
+            );
+        }
     }
 
     public static void registerRulesFromDependencies(RulesManager rulesManager){

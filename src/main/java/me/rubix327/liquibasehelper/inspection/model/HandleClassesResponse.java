@@ -12,6 +12,7 @@ public class HandleClassesResponse {
     private final @NotNull PsiClass baseClass;
     private boolean success;
     private String message;
+    private ErrorReason errorReason;
 
     public HandleClassesResponse(@NotNull PsiClass baseClass) {
         this.baseClass = baseClass;
@@ -27,8 +28,25 @@ public class HandleClassesResponse {
         return this;
     }
 
-    public static HandleClassesResponse makeErrorResponse(PsiClass psiClass, String message, Object... args){
-        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(message, args);
+    public HandleClassesResponse setErrorReason(ErrorReason reason){
+        this.errorReason = reason;
+        return this;
+    }
+
+    public static HandleClassesResponse makeErrorResponse(PsiClass psiClass, ErrorReason errorReason){
+        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(errorReason.name()).setErrorReason(errorReason);
+    }
+
+    public static HandleClassesResponse makeErrorResponse(PsiClass psiClass, ErrorReason errorReason, String message, Object... args){
+        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(message, args).setErrorReason(errorReason);
+    }
+
+    public enum ErrorReason{
+        CLASS_IS_NOT_DATAMODEL,
+        CLASS_IS_MAPPED,
+        CLASS_IS_INNER,
+        CANNOT_GET_QUALIFIED_NAME,
+        CANNOT_GET_DATAMODEL_TAG
     }
 
 }

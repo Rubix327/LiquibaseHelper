@@ -30,7 +30,7 @@ public class ClassRenameRefactoringListener implements RefactoringElementListene
                 void onElementMovedOrRenamed(@NotNull PsiElement psiElement){
                     if (!(psiElement instanceof PsiClass newClass)) return;
 
-                    MainLogger.info(element.getProject(), "Класс переименован из %s в %s", oldQualifiedName, newClass.getQualifiedName());
+                    MainLogger.info(element.getProject(), "Class has been renamed from %s to %s", oldQualifiedName, newClass.getQualifiedName());
 
                     RulesManager rulesManagerInstance = RulesManager.getInstance(newClass.getProject());
                     String newDatamodelName = RulesManager.getDatamodelNameOfClass(newClass);
@@ -42,7 +42,7 @@ public class ClassRenameRefactoringListener implements RefactoringElementListene
                     }
 
                     // Обновляем регистр правил, привязанных к datamodelName
-                    rulesManagerInstance.removeRulesByTagName(oldDatamodelName);
+                    rulesManagerInstance.removeRulesByTagNameAndClass(oldQualifiedName, oldDatamodelName);
                     rulesManagerInstance.handleClassAndSuperClasses(newClass); // TODO что будет при рефакторинге во время индексации?
 
                     // Ссылки из енумов на изменившийся класс - обновляются автоматически

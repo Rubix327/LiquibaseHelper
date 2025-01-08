@@ -1,12 +1,16 @@
 package me.rubix327.liquibasehelper.inspection;
 
 import com.intellij.codeInspection.LocalInspectionTool;
+import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemsHolder;
+import com.intellij.navigation.NavigationItem;
 import com.intellij.psi.*;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.searches.ClassInheritorsSearch;
 import com.intellij.psi.util.PsiUtil;
 import me.rubix327.liquibasehelper.Utils;
+import me.rubix327.liquibasehelper.inspection.model.TagRulesContainer;
+import me.rubix327.liquibasehelper.inspection.quickfix.OpenPsiElementQuickFix;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.CbsAnnotation;
 import me.rubix327.liquibasehelper.locale.Localization;
@@ -52,26 +56,16 @@ public class AnnotationInspector extends LocalInspectionTool {
                 }
 
                 String thisClassQualifiedName = psiClass.getQualifiedName();
+                String currentDatamodelName = RulesManager.getDatamodelNameOfClass(psiClass);
 
-                // Удаляем мусорные правила в процессе изменения value у аннотации @CbsDatamodelClass
-                String expectedDatamodelName = instance.getDatamodelValueFromRegistry(thisClassQualifiedName);
-                String realDatamodelName = RulesManager.getDatamodelNameOfClass(psiClass);
-                if (realDatamodelName != null && !realDatamodelName.equals(expectedDatamodelName) && thisClassQualifiedName != null){
-                    instance.removeRulesByTagName(expectedDatamodelName);
-                }
+                if (thisClassQualifiedName == null) return;
+                if (currentDatamodelName == null) return;
 
-                // Проверка на дублирующие значения CbsDatamodelClass.value у разных классов
-                if (realDatamodelName != null){
-                    List<String> classes = instance.getClassesByDatamodelName(realDatamodelName); // Получаем все классы, использующие этот datamodelName
-                    if (classes.size() > 1){
-                        classes.remove(thisClassQualifiedName); // Удаляем из списка текущий класс, чтобы оставить только другие
-                        String anotherClass = classes.get(0); // Получаем первый попавшийся класс
-                        instance.removeRulesByTagName(realDatamodelName); // Удаляем все правила этого datamodelName
-                        Utils.registerError(holder, annotation,
-                                Localization.message("class.warn.already-defined",
-                                realDatamodelName, Utils.getHtmlLink(anotherClass, anotherClass)));
-                        return;
-                    }
+                // Удаляем мусорные правила в процессе изменения tag у аннотации @CbsDatamodelClass
+                String savedDatamodelName = instance.getDatamodelValueFromRegistry(thisClassQualifiedName);
+                if (!currentDatamodelName.equals(savedDatamodelName)){
+                    instance.removeRulesByTagNameAndClass(thisClassQualifiedName, savedDatamodelName);
+                    instance.putDatamodelValueToRegistry(thisClassQualifiedName, currentDatamodelName);
                 }
 
                 // Собираем правила для класса и его родителей
@@ -82,6 +76,20 @@ public class AnnotationInspector extends LocalInspectionTool {
                     instance.handleClassAndSuperClasses(inheritor);
                 }
 
+                // Проверка на совпадающие теги у классов
+                List<TagRulesContainer> rulesFromDatamodelName = instance.getRulesContainerListByTagName(currentDatamodelName);
+                if (rulesFromDatamodelName.size() > 1){
+                    rulesFromDatamodelName.removeIf(e -> thisClassQualifiedName.equals(e.getMetaClassPath()));
+                    String anotherClass = rulesFromDatamodelName.get(0).getMetaClassPath();
+
+                    PsiClass anotherPsiClass = Utils.findPsiClassByQualifiedName(psiClass.getProject(), anotherClass);
+                    if (anotherPsiClass != null){
+                        LocalQuickFix fix = new OpenPsiElementQuickFix(anotherPsiClass, Localization.message("class.quickfix.open-another-class", anotherPsiClass.getName()));
+                        Utils.registerError(holder, StaticSettings.ERRORS_HIGHLIGHT_TYPE,
+                                fix, annotation, Localization.message("class.warn.already-defined", currentDatamodelName, anotherPsiClass.getName()));
+                    }
+                }
+
                 super.visitClass(psiClass);
             }
 
@@ -89,7 +97,7 @@ public class AnnotationInspector extends LocalInspectionTool {
                 // Если обновляется enum, который используется в мета-классах, то нужно обновить правила в этих мета-классах
                 Set<PsiClass> classesToUpdate = instance.getClassesUsingThisEnum(psiClass);
                 if (classesToUpdate != null){
-                    MainLogger.info(instance.getProject(), "Classes using enum %s: %s", psiClass.getName(), classesToUpdate);
+                    MainLogger.info(instance.getProject(), "Updating classes using enum %s: %s", psiClass.getName(), classesToUpdate.stream().map(NavigationItem::getName).toList());
                     for (PsiClass classToUpdate : classesToUpdate) {
                         if (classToUpdate == null || !classToUpdate.isValid()) continue;
                         instance.handleClassAndSuperClasses(classToUpdate);
