@@ -4,11 +4,11 @@ import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import org.jetbrains.annotations.NotNull;
 
-public class OpenSettingsAction extends AnAction {
+public class OpenActionsMenuAction extends AnAction {
 
     @Override
     public void actionPerformed(@NotNull AnActionEvent e) {
-        PluginSettingsDialog dialog = new PluginSettingsDialog(e.getProject());
+        PluginActionsDialog dialog = new PluginActionsDialog(e.getProject());
         dialog.show();
     }
 

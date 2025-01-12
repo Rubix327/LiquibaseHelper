@@ -27,6 +27,7 @@ import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse
 
 public class StartProjectComponent implements ProjectComponent {
 
+    private static final List<String> projectsRegisteredToUpdateRules = new ArrayList<>();
     private static final Map<String, String> projectPathToArtifactId = new HashMap<>();
     private final Project project;
 
@@ -41,8 +42,7 @@ public class StartProjectComponent implements ProjectComponent {
     @Override
     public void projectOpened() {
         MainLogger.info(project, "Loading settings:");
-        PersistentUserSettings settings = project.getService(PersistentUserSettings.class);
-        for (String s : settings.toString().split("\n")) {
+        for (String s : PersistentUserSettings.getInstance().toString().split("\n")) {
             MainLogger.info(project, 1, s);
         }
 
@@ -59,19 +59,34 @@ public class StartProjectComponent implements ProjectComponent {
             }
         }
 
+        registerRulesForAllClassesAfterIndexingInBackground(project);
+    }
+
+    public static void registerRulesForAllClassesAfterIndexingInBackground(@NotNull Project project){
+        // Предотвращение запуска регистрации правил несколько раз, пока не завершится хотя бы одна регистрация.
+        // Например, при смене git-веток во время индексации, могут удаляться сразу несколько файлов (N),
+        // и раньше это приводило к отложенному запуску регистрации правил N раз.
+        if (projectsRegisteredToUpdateRules.contains(project.getBasePath())){
+            return;
+        }
+        projectsRegisteredToUpdateRules.add(project.getBasePath());
+
         // Проверяем, что проект уже в режиме "умной" работы (индексация завершена)
         if (!DumbService.getInstance(project).isDumb()) {
             MainLogger.info(project, "The project is in smart mode.");
-            registerRulesForAllClasses(project);
+            registerRulesForAllClassesInBackground(project);
         } else {
             // Если индексация еще не завершена, регистрируем слушателя
             MainLogger.info(project, "The project is in dumb mode. Rules will be registered later.");
-            DumbService.getInstance(project).runWhenSmart(() -> registerRulesForAllClasses(project));
+            DumbService.getInstance(project).runWhenSmart(() -> registerRulesForAllClassesInBackground(project));
         }
-
     }
 
-    public static void registerRulesForAllClasses(Project project){
+    private static void registerRulesForAllClassesInBackground(@NotNull Project project){
+        Utils.runReadActionInBackground(project, "LiquibaseHelper: Loading rules", () -> registerRulesForAllClasses(project));
+    }
+
+    private static void registerRulesForAllClasses(Project project){
         RulesManager rulesManagerInstance = RulesManager.getInstance(project);
         rulesManagerInstance.resetAll();
         Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
@@ -97,7 +112,7 @@ public class StartProjectComponent implements ProjectComponent {
         logSkippedClasses(project, skippedResponses, CANNOT_GET_QUALIFIED_NAME, "- Could not get qualified name ({count}): {classes}");
         logSkippedClasses(project, skippedResponses, CANNOT_GET_DATAMODEL_TAG, "- Could not get datamodel tag ({count}): {classes}");
 
-        ClassDeletionListener.unregisterProjectRulesUpdate(project);
+        projectsRegisteredToUpdateRules.remove(project.getBasePath());
         MainLogger.info(project, "Project-level rules have been registered.");
 
         registerRulesFromDependencies(rulesManagerInstance);
@@ -117,7 +132,7 @@ public class StartProjectComponent implements ProjectComponent {
         }
     }
 
-    public static void registerRulesFromDependencies(RulesManager rulesManager){
+    private static void registerRulesFromDependencies(RulesManager rulesManager){
         Project project = rulesManager.getProject();
         try{
             MainLogger.info(project, "Registering rules from dependencies...");
@@ -160,7 +175,7 @@ public class StartProjectComponent implements ProjectComponent {
         }
     }
 
-    public static void registerClassDeletionListener(Project project) {
+    private static void registerClassDeletionListener(Project project) {
         PsiManager psiManager = PsiManager.getInstance(project);
         psiManager.addPsiTreeChangeListener(new ClassDeletionListener(), () -> {});
     }
@@ -171,7 +186,7 @@ public class StartProjectComponent implements ProjectComponent {
         RulesManager.getInstance(project).resetAll();
     }
 
-    public String getArtifactId(@NotNull VirtualFile file){
+    private String getArtifactId(@NotNull VirtualFile file){
         XmlFile xmlFile = Utils.parseXmlFile(project, file);
         if (xmlFile == null) return null;
 

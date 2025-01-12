@@ -118,7 +118,7 @@ public class RulesManager {
                         rulesFromClassAndSuperClasses.size() - rulesFromClass.size());
     }
 
-    private void addRules(@NotNull String datamodelName, TagRulesContainer rules){
+    private void addRules(@NotNull String datamodelName, @NotNull TagRulesContainer rules){
         Set<TagRulesContainer> rulesFromClass = parentToTagRulesContainer.get(datamodelName);
         if (rulesFromClass == null){
             Set<TagRulesContainer> rulesSet = new HashSet<>(Set.of(rules));
@@ -354,7 +354,7 @@ public class RulesManager {
      * @param changedClass Перечислимый тип
      * @param classToUpdate Класс, использующий этот ПТ
      */
-    private void addEnumToClassesUsingIt(PsiClass changedClass, PsiClass classToUpdate){
+    private void addEnumToClassesUsingIt(@NotNull PsiClass changedClass, @NotNull PsiClass classToUpdate){
         Set<PsiClass> existingClassesToUpdate = enumsToClassesUsingThem.get(changedClass);
         if (existingClassesToUpdate == null){
             enumsToClassesUsingThem.put(changedClass, new HashSet<>(Collections.singletonList(classToUpdate)));
@@ -437,7 +437,7 @@ public class RulesManager {
     }
 
     public void removeRulesByTagNameAndClass(String classQualifiedName, String tagName){
-        Set<TagRulesContainer> tagContainers = new HashSet<>(parentToTagRulesContainer.get(tagName));
+        Set<TagRulesContainer> tagContainers = new HashSet<>(parentToTagRulesContainer.getOrDefault(tagName, new HashSet<>()));
         for (TagRulesContainer tagContainer : tagContainers) {
             if (classQualifiedName.equals(tagContainer.getMetaClassPath())){
                 if (parentToTagRulesContainer.get(tagName).size() == 1){
@@ -452,7 +452,7 @@ public class RulesManager {
     }
 
     public List<TagRulesContainer> getRulesContainerListByTagName(String tagName){
-        return new ArrayList<>(parentToTagRulesContainer.get(tagName));
+        return new ArrayList<>(parentToTagRulesContainer.getOrDefault(tagName, new HashSet<>()));
     }
 
     public TagRulesContainer getRulesContainerByTagName(String tagName){

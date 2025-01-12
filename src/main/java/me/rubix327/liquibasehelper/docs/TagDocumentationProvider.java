@@ -137,7 +137,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
         resultTooltip.append(Utils.isNotBlank(rule.getTagDescription()) ? "<br>" + rule.getTagDescription() : "");
         if (rule.isExtendedTooltipInfo()){
             resultTooltip.append("<br>");
-            if (rule.getMaxLength() != -1){
+            if (rule.getMaxLength() > 0){
                 resultTooltip.append("<br>").append(Localization.message("docs.child-tag.max-length")).append(" ").append(rule.getMaxLength());
             }
             resultTooltip.append(getTypeTooltip(rule));

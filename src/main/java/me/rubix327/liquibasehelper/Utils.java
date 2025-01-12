@@ -6,6 +6,9 @@ import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.OpenFileDescriptor;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
@@ -401,6 +404,15 @@ public class Utils {
             } catch (ParseException ignored){}
         }
         return false;
+    }
+
+    public static void runReadActionInBackground(@NotNull Project project, @NotNull String title, Runnable runnable){
+        ProgressManager.getInstance().run(new Task.Backgroundable(project, title) {
+            @Override
+            public void run(@NotNull ProgressIndicator progressIndicator) {
+                ApplicationManager.getApplication().runReadAction(runnable);
+            }
+        });
     }
 
 }

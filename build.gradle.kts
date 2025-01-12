@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.rubix327"
-version = "1.0.22"
+version = "1.0.23"
 
 repositories {
     mavenCentral()

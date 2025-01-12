@@ -11,16 +11,7 @@ import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.CbsAnnotation;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class ClassDeletionListener implements PsiTreeChangeListener {
-
-    private static final List<String> projectsRegisteredToUpdateRules = new ArrayList<>();
-
-    public static void unregisterProjectRulesUpdate(Project project){
-        projectsRegisteredToUpdateRules.remove(project.getBasePath());
-    }
 
     @Override
     public void beforeChildRemoval(@NotNull PsiTreeChangeEvent psiTreeChangeEvent) {
@@ -30,15 +21,7 @@ public class ClassDeletionListener implements PsiTreeChangeListener {
 
         // Если индексация еще не завершена, регистрируем слушателя
         if (DumbService.getInstance(project).isDumb()){
-            // Предотвращение запуска регистрации правил несколько раз, пока не завершится хотя бы одна регистрация.
-            // Например, при смене git-веток во время индексации, могут удаляться сразу несколько файлов (N),
-            // и раньше это приводило к отложенному запуску регистрации правил N раз.
-            if (projectsRegisteredToUpdateRules.contains(project.getBasePath())){
-                return;
-            }
-
-            DumbService.getInstance(project).runWhenSmart(() -> StartProjectComponent.registerRulesForAllClasses(project));
-            projectsRegisteredToUpdateRules.add(project.getBasePath());
+            StartProjectComponent.registerRulesForAllClassesAfterIndexingInBackground(project);
             return;
         }
 

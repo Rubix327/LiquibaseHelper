@@ -34,7 +34,12 @@ public class MainLogger {
     }
 
     public static void info(@NotNull String s, Object... args){
-        String result = String.format(s, args);
+        info(0, s, args);
+    }
+
+    public static void info(int offset, @NotNull String s, Object... args){
+        String offsetStr = "  ".repeat(offset);
+        String result = offsetStr + String.format(s, args);
         System.out.println(result);
         LOGGER.info(result);
     }

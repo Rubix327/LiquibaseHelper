@@ -20,96 +20,6 @@ import java.util.List;
 
 public class XmlTagValuesInspector extends LocalInspectionTool {
 
-//    public static final Map<String, List<TagRule>> tagRules = new HashMap<>(){{
-//        put("accIntentionTreeMeta", List.of(
-//                new StringTagRule("accLabel", 255),
-//                new StringTagRule("parentCode", 50),
-//                new StringTagRule("externalCode", 50),
-//                new StringTagRule("label", 50),
-//                new StringTagRule("code", 50),
-//                new StringTagRule("description", 255),
-//                new StringTagRule("bankOperationTypeCode", 255),
-//                new StringTagRule("digitalCode", 50)
-//        ));
-//        put("accountTypeWrapperMetas", List.of(
-//                new StringTagRule("code", 50),
-//                new StringTagRule("parentCode", 50),
-//                new StringTagRule("description", 255),
-//                new StringTagRule("externalCode", 50),
-//                new TagRule("isGroup", Integer.class.getTypeName()),
-//                new TagRule("level", Integer.class.getTypeName()),
-//                new StringTagRule("label", 255),
-//                new StringTagRule("labelEn", 50),
-//                new StringTagRule("isActive", 255, List.of("Active", "Passive", "Any"))
-//        ));
-//        put("accIntentionGenAccWrapperMeta", List.of(
-//                new StringTagRule("label", 100),
-//                new StringTagRule("accIntentionCode", 50),
-//                new StringTagRule("accountTypeCode", 50)
-//        ));
-//        put("modelFullMeta", List.of(
-//                new StringTagRule("code", 50),
-//                new StringTagRule("label", 50),
-//                new StringTagRule("description", 255),
-//                new StringTagRule("modelEntityClassCode", 100)
-//        ));
-//        put("modelAccIntentionMeta", List.of(
-//                new StringTagRule("label", 50),
-//                new StringTagRule("modelCode", 50),
-//                new StringTagRule("accIntentionCode", 50),
-//                new StringTagRule("accDetermineOptionCode", 255, List.of("Document", "AccountingModel", "AccountGroup")),
-//                new StringTagRule("accOpenOptionCode", 255, List.of("Manual", "EventBased")),
-//                new StringTagRule("accCurrencyOptionCode", 255, List.of("CurrencyGroup", "DocumentCurrency", "CurrencyAfterConversion", "AccountCurrency", "NoCurrency", "EventCurrency", "CurrencyContext")),
-//                new StringTagRule("maybeSetInDocCode", -1, List.of("0", "1")),
-//                new StringTagRule("maybeSetInPact", -1, List.of("0", "1"))
-//        ));
-//        put("modelAccIntentionAccountMeta", List.of(
-//                new StringTagRule("label", 50),
-//                new StringTagRule("modelCode", 50),
-//                new StringTagRule("accIntentionCode", 50)
-//        ));
-//        put("modelEventMeta", List.of(
-//                new StringTagRule("code", 50),
-//                new StringTagRule("description", 255),
-//                new StringTagRule("modelCode", 50),
-//                new TagRule("directionCode", Integer.class.getTypeName(), List.of("1", "2", "3"), -1),
-//                new TagRule("typeCode", Integer.class.getTypeName(), 1)
-//        ));
-//        put("modelEventAccountMeta", List.of(
-//                new StringTagRule("label", 50),
-//                new StringTagRule("modelCode", 50),
-//                new StringTagRule("modelEventCode", 50),
-//                new StringTagRule("accIntentionCode", 50),
-//                new StringTagRule("isForceOpenCode", -1, List.of("0", "1")),
-//                new StringTagRule("accountLabel", 255)
-//        ));
-//        put("corrAccountEventMeta", List.of(
-//                new StringTagRule("modelCode", 50),
-//                new StringTagRule("modelEventCode", 50),
-//                new StringTagRule("payDocTypeCode", 255, List.of("INTERNAL_TRANSFER",
-//                        "INTERNAL_ACCOUNT_TRANSFER", "NOT_BALANCE_TRANSFER", "CURRENCY_PAYMENT_ORDER", "NATIONAL_PAYMENT",
-//                        "INCOMING_CASH_ORDER", "EXPENSE_CASH_ORDER", "MEMORIAL_ORDER", "NOT_BALANCE_DEBIT_RUB",
-//                        "NOT_BALANCE_CREDIT_RUB", "COMMISSION")).setTagTooltip("Тип платежного документа"),
-//                new StringTagRule("roCode", 255, List.of("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18")),
-//                new StringTagRule("payQueueCode", -1, List.of("1", "2", "3", "4", "5", "6")),
-//                new TagRule("priority", Integer.class.getTypeName(), 10),
-//                new StringTagRule("isDisabled", -1, List.of("0", "1")),
-//                new StringTagRule("transactionCode", 50),
-//                new StringTagRule("payPurpose", 255)
-//        ));
-//        put("corrAccountEventSideMeta", List.of(
-//                new StringTagRule("corrAccountEventCode", 50),
-//                new StringTagRule("sideCode", 255, List.of("Debit", "Credit")),
-//                new StringTagRule("modelCode", 50),
-//                new StringTagRule("accIntentionCode", 50),
-//                new StringTagRule("amountOptionCode", 255, List.of("EventAmount", "AmountAfterConversion",
-//                        "Method", "CommissionAmount", "ProcessAttribute", "DebitAmount", "CreditAmount", "TaxAmount", "CommissionAmountPlusTaxAmount"))
-//        ));
-//        put("changeSet", List.of(
-//                new StringTagRule("comment", 255).setTagTooltip("Комментарий к ченджсету. Отображается только в колонке comments таблицы databaseChangeLog.")
-//        ));
-//    }};
-
     public static final List<AttributeRule> attributeRules = new ArrayList<>(){{
         add(new AttributeRule("id").setMustParentName("changeSet").setMaxLength(255).setAttributeTooltip("Идентификатор ченджсета. Должен быть уникальным в разрезе этого файла."));
         add(new AttributeRule("author").setMustParentName("changeSet").setMaxLength(255).setAttributeTooltip("Автор этого ченджсета."));
@@ -125,10 +35,6 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         add(new AttributeRule("newColumnName").setMustGrandParentName("changeSet").setMaxLength(30).setAttributeTooltip("Новое название колонки"));
         add(new AttributeRule("name").setMustParentName("column").setMaxLength(30).setAttributeTooltip("Название колонки"));
     }};
-
-//    public static final List<RequiredTagsRule> requiredTagsRules = new ArrayList<>(){{
-//        add(new RequiredTagsRule("changeSet").setRequiredInnerTags(List.of("comment")));
-//    }};
 
     @Override
     public @NotNull PsiElementVisitor buildVisitor(@NotNull ProblemsHolder holder, boolean isOnTheFly) {
@@ -184,7 +90,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         }
 
         if (attributeText == null) return;
-        if (rule.getMaxLength() != -1 && attributeText.length() > rule.getMaxLength()){
+        if (rule.getMaxLength() > 0 && attributeText.length() > rule.getMaxLength()){
             Utils.registerError(holder, attribute, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_ATTR.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
         }
     }
@@ -217,7 +123,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
         String tagText = tag.getValue().getText();
 
         // Проверка на максимальную длину
-        if (rule.getMaxLength() != -1 && tagText.length() > rule.getMaxLength()){
+        if (rule.getMaxLength() > 0 && tagText.length() > rule.getMaxLength()){
             Utils.registerErrorOnValueOrTag(holder, tag, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_TAG.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
         }
 

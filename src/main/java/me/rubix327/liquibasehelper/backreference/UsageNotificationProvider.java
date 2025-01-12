@@ -3,13 +3,12 @@ package me.rubix327.liquibasehelper.backreference;
 import com.intellij.icons.AllIcons;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Key;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.ui.EditorNotificationPanel;
-import com.intellij.ui.EditorNotifications;
+import com.intellij.ui.EditorNotificationProvider;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
@@ -23,66 +22,62 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.awt.*;
 import java.util.List;
+import java.util.function.Function;
 
-public class UsageNotificationProvider extends EditorNotifications.Provider<EditorNotificationPanel> {
-
-    @Override
-    public @NotNull Key<EditorNotificationPanel> getKey() {
-        return Key.create("usage.notification.panel");
-    }
+public class UsageNotificationProvider implements EditorNotificationProvider {
 
     @Override
-    public @Nullable EditorNotificationPanel createNotificationPanel(@NotNull VirtualFile file, @NotNull FileEditor fileEditor, @NotNull Project project) {
-        // Проверяем, что файл находится внутри datamodel/resources и имеет расширение .xml
-        if (!file.getPath().contains("datamodel") || !file.getPath().contains("resources") || !"xml".equalsIgnoreCase(file.getExtension())){
-            return null;
-        }
-
-        if (!StaticSettings.ENABLE_BACK_REFERENCES && !StaticSettings.ENABLE_NOT_LOADED_NOTIFICATIONS){
-            return null;
-        }
-
-        List<PsiElement> usages = UsageFinderUtil.findUsages(project, file);
-
-        EditorNotificationPanel panel = new EditorNotificationPanel();
-        if (!usages.isEmpty()) {
-            if (!StaticSettings.ENABLE_BACK_REFERENCES){
+    public @Nullable Function<? super @NotNull FileEditor, ? extends @Nullable JComponent> collectNotificationData(@NotNull Project project, @NotNull VirtualFile file) {
+        return (Function<FileEditor, JComponent>) fileEditor -> {
+            // Проверяем, что файл находится внутри datamodel/resources и имеет расширение .xml
+            if (!file.getPath().contains("datamodel") || !file.getPath().contains("resources") || !"xml".equalsIgnoreCase(file.getExtension())){
                 return null;
             }
 
-            String text = Localization.message("file.usages", usages.size());
-            if (usages.size() == 1){
-                text += " - " + Utils.getDisplayPathCutProject(project, usages.get(0).getContainingFile().getVirtualFile().getPath());
+            if (!StaticSettings.ENABLE_BACK_REFERENCES && !StaticSettings.ENABLE_NOT_LOADED_NOTIFICATIONS){
+                return null;
             }
 
-            // Добавляем кнопку перехода к первому найденному месту использования
-            JLabel goToUsageButton = new JBLabel(text, UIUtil.ComponentStyle.LARGE, UIUtil.FontColor.BRIGHTER);
-            goToUsageButton.setForeground(JBUI.CurrentTheme.Link.Foreground.ENABLED);
-            goToUsageButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            goToUsageButton.setIcon(AllIcons.Icons.Ide.NextStep);
-            goToUsageButton.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    new GoToUsagePopup(project).showUsagesPopup(usages, goToUsageButton);
+            List<PsiElement> usages = UsageFinderUtil.findUsages(project, file);
+            EditorNotificationPanel panel = new EditorNotificationPanel();
+
+            if (isMainCumulative(project, file)){
+                // В главном кумулятиве панель вообще не нужна
+                return null;
+            }
+
+            if (!usages.isEmpty()) {
+                String text = Localization.message("file.usages", usages.size());
+                if (usages.size() == 1){
+                    text += " - " + Utils.getDisplayPathCutProject(project, usages.get(0).getContainingFile().getVirtualFile().getPath());
                 }
-            });
 
-            panel.add(goToUsageButton);
-        }
-        else if (isMainCumulative(project, file)){
-            // В главном кумулятиве панель вообще не нужна
-            return null;
-        }
-        else {
-            if (!StaticSettings.ENABLE_NOT_LOADED_NOTIFICATIONS){
-                return null;
+                // Добавляем кнопку перехода к первому найденному месту использования
+                JLabel goToUsageButton = new JBLabel(text, UIUtil.ComponentStyle.LARGE, UIUtil.FontColor.BRIGHTER);
+                goToUsageButton.setForeground(JBUI.CurrentTheme.Link.Foreground.ENABLED);
+                goToUsageButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                goToUsageButton.setIcon(AllIcons.Icons.Ide.NextStep);
+                goToUsageButton.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override
+                    public void mouseClicked(java.awt.event.MouseEvent e) {
+                        new GoToUsagePopup(project).showUsagesPopup(usages, goToUsageButton);
+                    }
+                });
+
+                panel.add(goToUsageButton);
+            }
+            else {
+                if (!StaticSettings.ENABLE_NOT_LOADED_NOTIFICATIONS){
+                    return null;
+                }
+
+                panel.icon(AllIcons.Debugger.Db_obsolete);
+                String panelText = isFileMustBeLoadedByCumulative(project, file) ? Localization.message("file.not-loaded.cumulative") : Localization.message("file.not-loaded.changeset");
+                panel.setText(panelText);
             }
 
-            panel.icon(AllIcons.Debugger.Db_obsolete);
-            String panelText = isFileMustBeLoadedByCumulative(project, file) ? Localization.message("file.not-loaded.cumulative") : Localization.message("file.not-loaded.changeset");
-            panel.setText(panelText);
-        }
-        return panel;
+            return panel;
+        };
     }
 
     public boolean isMainCumulative(Project project, VirtualFile file){

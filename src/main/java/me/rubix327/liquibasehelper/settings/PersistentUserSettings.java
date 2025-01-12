@@ -1,6 +1,8 @@
 package me.rubix327.liquibasehelper.settings;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.PersistentStateComponent;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.components.State;
 import com.intellij.openapi.components.Storage;
 import com.intellij.util.xmlb.XmlSerializerUtil;
@@ -11,8 +13,9 @@ import org.jetbrains.annotations.NotNull;
 
 @Getter
 @Setter
-@State(name = "PersistentUserSettings", storages = @Storage("PersistentUserSettings.xml"))
-public class PersistentUserSettings implements PersistentStateComponent<PersistentUserSettings> {
+@State(name = "LiquibaseHelperUserSettings", storages = @Storage("LiquibaseHelperUserSettings.xml"))
+@Service(Service.Level.APP)
+public final class PersistentUserSettings implements PersistentStateComponent<PersistentUserSettings> {
     public boolean enableReferences = true;
     public boolean enableBackReferences = true;
     public boolean enableNotLoadedNotifications = true;
@@ -21,6 +24,10 @@ public class PersistentUserSettings implements PersistentStateComponent<Persiste
     public boolean enableTagAutoCompletion = true;
     public boolean enableSettingsMenu = true;
     public Locale locale = Locale.RU;
+
+    public static PersistentUserSettings getInstance() {
+        return ApplicationManager.getApplication().getService(PersistentUserSettings.class);
+    }
 
     @Override
     public PersistentUserSettings getState() {
@@ -47,6 +54,17 @@ public class PersistentUserSettings implements PersistentStateComponent<Persiste
     public void changeLanguage(Locale locale){
         StaticSettings.LOCALE = locale;
         java.util.Locale.setDefault(new java.util.Locale(locale.getName()));
+    }
+
+    public boolean isSettingsModified(){
+        return  enableReferences != StaticSettings.ENABLE_REFERENCES ||
+                enableBackReferences != StaticSettings.ENABLE_BACK_REFERENCES ||
+                enableNotLoadedNotifications != StaticSettings.ENABLE_NOT_LOADED_NOTIFICATIONS ||
+                enableInspections != StaticSettings.ENABLE_INSPECTIONS ||
+                enableDocumentation != StaticSettings.ENABLE_DOCUMENTATION ||
+                enableTagAutoCompletion != StaticSettings.ENABLE_TAG_AUTO_COMPLETION ||
+                enableSettingsMenu != StaticSettings.ENABLE_SETTINGS_MENU ||
+                locale != StaticSettings.LOCALE;
     }
 
     public void resetDynamicSettings(){

@@ -2,10 +2,10 @@
 <idea-plugin>
     <id>me.rubix327.liquibasehelper</id>
     <name>LiquibaseHelper</name>
-    <vendor email="rubix3327@gmail.com" url="https://www.newathena.ru/">gya</vendor>
+    <vendor email="yagolubev@diasoft.ru" url="https://diasoft.inspider.ru/u/33347/">yagolubev</vendor>
     <description><![CDATA[
     This plugin allows you to navigate between files in Liquibase changesets and provides the ability to create rules for XML-tags with beautiful tooltips.<br>
-    <em>Made with love by <b>gya</b> especially for New Athena.</em>
+    <em>Made with love by <b>yagolubev</b> especially for New Athena.</em>
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -46,13 +46,13 @@
         <documentationProvider implementation="me.rubix327.liquibasehelper.docs.TagDocumentationProvider"/>
         <completion.contributor implementationClass="me.rubix327.liquibasehelper.completion.TagCompletionContributor" language="XML"/>
         <refactoring.elementListenerProvider implementation="me.rubix327.liquibasehelper.listener.ClassRenameRefactoringListener" />
-        <projectService serviceImplementation="me.rubix327.liquibasehelper.settings.PersistentUserSettings"/>
+        <applicationConfigurable instance="me.rubix327.liquibasehelper.settings.UserSettingsConfigurable" displayName="LiquibaseHelper"/>
     </extensions>
 
     <actions>
-        <group id="LiquibaseHelper.Menu" text="LiquibaseHelper" description="LiquibaseHelper settings">
+        <group id="LiquibaseHelper.Menu" text="LiquibaseHelper" description="LiquibaseHelper">
             <add-to-group group-id="MainMenu" anchor="last"/>
-            <action class="me.rubix327.liquibasehelper.form.OpenSettingsAction" id="LiquibaseHelper.Actions.MenuAction" text="Settings..."/>
+            <action class="me.rubix327.liquibasehelper.form.OpenActionsMenuAction" id="LiquibaseHelper.Actions.MenuAction" text="Actions..."/>
         </group>
     </actions>
 
