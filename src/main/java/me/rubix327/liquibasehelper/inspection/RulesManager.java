@@ -3,6 +3,7 @@ package me.rubix327.liquibasehelper.inspection;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtil;
+import me.rubix327.liquibasehelper.AnnotationUtils;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.model.AvailableValue;
 import me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse;
@@ -14,8 +15,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
+import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.ErrorReason;
+import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.makeErrorResponse;
 import static me.rubix327.liquibasehelper.settings.CbsAnnotation.*;
-import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.*;
 
 public class RulesManager {
 
@@ -70,46 +72,59 @@ public class RulesManager {
         classToDatamodelValueRegistry.clear();
     }
 
+    private HandleClassesResponse makeErrorResponseAndRemoveRules(@NotNull PsiClass psiClass, @NotNull ErrorReason errorReason){
+        removeRulesOfClass(psiClass);
+        return makeErrorResponse(psiClass, errorReason);
+    }
+
     /**
      * Обновить все правила для указанного класса и его родителей.
      */
     public HandleClassesResponse handleClassAndSuperClasses(@NotNull PsiClass psiClass) {
         // Если класс == null или у него нет аннотации @CbsDatamodelClass
-        if (Utils.isNotDatamodelClass(psiClass)){
-            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_NOT_DATAMODEL, "Skipping class {class} (not a datamodel class).");
+        if (AnnotationUtils.isNotDatamodelClass(psiClass)){
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_NOT_DATAMODEL);
         }
         // Если класс mapped, то пропускаем (такой класс только встраивает свои правила внутрь дочерних)
-        if (Utils.isDatamodelMappedClass(psiClass)){
-            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_MAPPED, "Skipping class {class} (the class is mapped).");
+        // Регистрация правил из mapped классов происходит ниже, через метод #getRulesFromSuperClasses.
+        // Если от mapped класса не наследуется ни один другой класс, то правила этого класса никогда не будут зарегистрированы.
+        if (AnnotationUtils.isDatamodelMappedClass(psiClass)){
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_MAPPED);
         }
         // Если класс вложенный
         if (Utils.isClassAndFileNamesNotMatch(psiClass)) {
-            return makeErrorResponse(psiClass, ErrorReason.CLASS_IS_INNER, "Skipping class {class} (the class is inner).");
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_INNER);
+        }
+        // Если класс это enum
+        if (psiClass.isEnum()){
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_ENUM);
+        }
+
+        String thisClassQualifiedName = psiClass.getQualifiedName();
+        String datamodelNameOfClass = getDatamodelNameOfClass(psiClass);
+
+        if (thisClassQualifiedName == null){
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CANNOT_GET_QUALIFIED_NAME);
+        }
+        if (datamodelNameOfClass == null){
+            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CANNOT_GET_DATAMODEL_TAG);
         }
 
         List<TagRule> rulesFromClass = getRulesFromFields(psiClass);
         assert rulesFromClass != null; // Все проверки уже проведены выше, поэтому метод getRulesFromFields не может вернуть null
 
         List<TagRule> rulesFromClassAndSuperClasses = getRulesFromSuperClasses(psiClass, rulesFromClass);
-        String datamodelNameOfClass = getDatamodelNameOfClass(psiClass);
 
-        String thisClassQualifiedName = psiClass.getQualifiedName();
-        if (thisClassQualifiedName == null){
-            return makeErrorResponse(psiClass, ErrorReason.CANNOT_GET_QUALIFIED_NAME, "Skipping class {class} (could not get qualified name of class).");
-        }
-        if (datamodelNameOfClass == null){
-            return makeErrorResponse(psiClass, ErrorReason.CANNOT_GET_DATAMODEL_TAG, "Skipping class {class} (could not get datamodel tag of class).");
-        }
-
-        putDatamodelValueToRegistry(psiClass.getQualifiedName(), datamodelNameOfClass);
-        addRules(datamodelNameOfClass, new TagRulesContainer()
+        putDatamodelValueToRegistry(thisClassQualifiedName, datamodelNameOfClass);
+        TagRulesContainer container = new TagRulesContainer()
                 .setParentTagName(datamodelNameOfClass)
                 .setTagRules(rulesFromClassAndSuperClasses)
-                .setParentTagTooltip(Utils.getCbsDatamodelClassAnnotationFieldValue(psiClass, CbsDatamodelClass.Fields.COMMENT))
-                .setParentTagDescription(Utils.getCbsDatamodelClassAnnotationFieldValue(psiClass, CbsDatamodelClass.Fields.DESCRIPTION))
-                .setClassPath(psiClass.getQualifiedName())
-                .setClassNameOffset(psiClass.getTextOffset())
-        );
+                .setParentTagTooltip(AnnotationUtils.getCbsDatamodelClassAnnotationFieldStringValue(psiClass, CbsDatamodelClass.Fields.COMMENT))
+                .setParentTagDescription(AnnotationUtils.getCbsDatamodelClassAnnotationFieldStringValue(psiClass, CbsDatamodelClass.Fields.DESCRIPTION))
+                .setClassPath(thisClassQualifiedName)
+                .setClassNameOffset(psiClass.getTextOffset());
+
+        addRules(datamodelNameOfClass, container);
 
         return new HandleClassesResponse(psiClass).setSuccess(true)
                 .setMessage("- {class} (%s): %s (base: %s, super: %s)",
@@ -174,7 +189,7 @@ public class RulesManager {
     @Nullable
     public static String getDatamodelNameOfClass(@NotNull PsiClass psiClass){
         // Из tag в аннотации @CbsDatamodelClass
-        String fromField = Utils.getCbsDatamodelClassAnnotationFieldValue(psiClass, CbsDatamodelClass.Fields.TAG);
+        String fromField = AnnotationUtils.getCbsDatamodelClassAnnotationFieldStringValue(psiClass, CbsDatamodelClass.Fields.TAG);
         if (fromField != null){
             return fromField;
         }
@@ -197,11 +212,10 @@ public class RulesManager {
      * @return Правила из полей
      */
     private List<TagRule> getRulesFromFields(@Nullable PsiClass psiClass) {
-        if (Utils.isNotDatamodelClass(psiClass)) {
+        if (AnnotationUtils.isNotDatamodelClass(psiClass)) {
             return null;
         }
 
-        assert psiClass != null;
         // Название класса не совпадает с названием файла, в котором он находится (это вложенный класс)
         if (Utils.isClassAndFileNamesNotMatch(psiClass)) {
             return null;
@@ -211,7 +225,7 @@ public class RulesManager {
         List<TagRule> resultRules = new ArrayList<>();
 
         for (PsiField field : fields) {
-            PsiAnnotation fieldAnnotation = Utils.findAnnotation(field, CbsDatamodelField.INSTANCE);
+            PsiAnnotation fieldAnnotation = AnnotationUtils.findAnnotation(field, CbsDatamodelField.INSTANCE);
             if (fieldAnnotation == null) {
                 continue;
             }
@@ -228,35 +242,15 @@ public class RulesManager {
 
             tagRule.setMetaClassPath(psiClass.getQualifiedName());
             tagRule.setMetaFieldOffset(field.getTextOffset());
-
-            if (tooltipText instanceof PsiLiteralExpression tooltipString){
-                if (tooltipString.getValue() instanceof String tooltipValue && Utils.isNotBlank(tooltipValue)){
-                    tagRule.setTagTooltip(tooltipValue);
-                }
-            }
-
-            if (tooltipDescription instanceof PsiLiteralExpression tooltipDescriptionString){
-                if (tooltipDescriptionString.getValue() instanceof String tooltipDescriptionValue && Utils.isNotBlank(tooltipDescriptionValue)){
-                    tagRule.setTagDescription(tooltipDescriptionValue);
-                }
-            }
-
-            if (required instanceof PsiLiteralExpression requiredBoolean){
-                if (requiredBoolean.getValue() instanceof Boolean requiredBooleanValue){
-                    tagRule.setRequired(requiredBooleanValue);
-                }
-            }
-
-            if (maxLength instanceof PsiLiteralExpression maxLengthInteger){
-                if (maxLengthInteger.getValue() instanceof Integer maxLengthIntegerValue){
-                    tagRule.setMaxLength(maxLengthIntegerValue);
-                }
-            }
+            tagRule.setTagTooltip(AnnotationUtils.getStringValue(tooltipText));
+            tagRule.setTagDescription(AnnotationUtils.getStringValue(tooltipDescription));
+            tagRule.setRequired(AnnotationUtils.getBooleanValueOrDefault(required, false));
+            tagRule.setMaxLength(AnnotationUtils.getIntegerValueOrDefault(maxLength, 0));
 
             if (type instanceof PsiClassObjectAccessExpression typeValue){
                 PsiType mustType = typeValue.getOperand().getType();
                 PsiClass mustTypeClass = PsiUtil.resolveClassInType(mustType);
-                if (mustTypeClass != null && AnnotationInspector.isClassOfAnyType(mustTypeClass, String.class, Long.class, Double.class, Boolean.class, Date.class)){
+                if (mustTypeClass != null && Utils.isClassOfAnyType(mustTypeClass, String.class, Long.class, Double.class, Boolean.class, Date.class)){
                     tagRule.setType(mustTypeClass.getQualifiedName());
                 }
             }
@@ -268,10 +262,9 @@ public class RulesManager {
             }
 
             // Возможные значения из availableValues в виде одиночной строки
-            if (availableValues instanceof PsiLiteralExpression availableValuesString){
-                if (availableValuesString.getValue() instanceof String availableValuesStringString){
-                    tagRule.setAvailableValues(AvailableValue.stringToAvailableValues(availableValuesStringString));
-                }
+            String availableValuesString = AnnotationUtils.getStringValue(availableValues);
+            if (availableValuesString != null){
+                tagRule.setAvailableValues(AvailableValue.stringToAvailableValues(availableValuesString));
             }
 
             // Возможные значения из availableValues в виде массива
@@ -338,7 +331,7 @@ public class RulesManager {
 
             result = new ArrayList<>();
             for (PsiField field : enumClass.getFields()) {
-                if (Utils.findAnnotation(field, CbsDatamodelIgnore.INSTANCE) != null) continue;
+                if (AnnotationUtils.findAnnotation(field, CbsDatamodelIgnore.INSTANCE) != null) continue;
                 if (!(field instanceof PsiEnumConstant enumConstant)) continue;
 
                 String value = getEnumValue(enumConstant, enumClass);
@@ -374,14 +367,18 @@ public class RulesManager {
      * @return Значение
      */
     private String getEnumValue(PsiEnumConstant field, PsiClass enumClass){
-        PsiAnnotation valueAnnotation = Utils.findAnnotation(field, CbsDatamodelValue.INSTANCE);
+        String result;
+
+        // Из аннотации @CbsDatamodelValue
+        PsiAnnotation valueAnnotation = AnnotationUtils.findAnnotation(field, CbsDatamodelValue.INSTANCE);
         if (valueAnnotation != null){
-            PsiAnnotationMemberValue value = valueAnnotation.findDeclaredAttributeValue(CbsDatamodelValue.Fields.VALUE);
-            if (value instanceof PsiLiteralExpression psiValue){
-                return (String) psiValue.getValue();
+            result = AnnotationUtils.getStringValue(valueAnnotation.findDeclaredAttributeValue(CbsDatamodelValue.Fields.VALUE));
+            if (result != null){
+                return result;
             }
         }
 
+        // Из поля value из конструктора класса
         Integer valueIndexInConstructor = getValueIndexInConstructor(enumClass);
         PsiExpressionList enumArgumentList = field.getArgumentList();
         if (valueIndexInConstructor != null && enumArgumentList != null && enumArgumentList.getExpressions().length >= valueIndexInConstructor + 1){
@@ -432,8 +429,9 @@ public class RulesManager {
 
     public void removeRulesOfClass(@NotNull PsiClass psiClass){
         String datamodelName = getDatamodelNameOfClass(psiClass);
-        parentToTagRulesContainer.remove(datamodelName);
-        MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s)", datamodelName, psiClass.getName());
+        if (parentToTagRulesContainer.remove(datamodelName) != null){
+            MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s)", datamodelName, psiClass.getName());
+        }
     }
 
     public void removeRulesByTagNameAndClass(String classQualifiedName, String tagName){

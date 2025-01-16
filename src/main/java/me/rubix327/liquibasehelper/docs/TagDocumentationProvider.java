@@ -6,6 +6,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.xml.XmlAttribute;
 import com.intellij.psi.xml.XmlTag;
+import com.intellij.psi.xml.XmlText;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.RulesManager;
 import me.rubix327.liquibasehelper.inspection.XmlTagValuesInspector;
@@ -19,6 +20,8 @@ import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -33,7 +36,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
         if (parts.length < 3) return null;
 
         String classPath = parts[1]; // class qualifiedName
-        String offsetStr = parts[2]; // offset from TagRule.linkToFieldOffset or TagRulesContainer.linkToClassNameOffset
+        String offsetStr = parts[2]; // offset from TagRule.metaFieldOffset or TagRulesContainer.metaClassNameOffset
 
         int offset = 0;
         try{
@@ -59,6 +62,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
 
         XmlTag xmlTag = getXmlTag(element, originalElement);
         XmlAttribute xmlAttribute = getXmlAttribute(element, originalElement);
+        XmlText xmlText = getXmlText(element, originalElement);
 
         if (xmlTag != null){
             return getTagTooltip(xmlTag);
@@ -68,6 +72,19 @@ public class TagDocumentationProvider implements DocumentationProvider {
             return getAttributeTooltip(xmlAttribute);
         }
 
+        if (xmlText != null){
+            return getTextTooltip(xmlText);
+        }
+
+        return null;
+    }
+
+    private String getTextTooltip(XmlText xmlText) {
+        System.out.println(xmlText.getValue());
+        LocalDateTime date = Utils.getDate(xmlText.getValue());
+        if (date != null){
+            return DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").format(date);
+        }
         return null;
     }
 
@@ -204,6 +221,17 @@ public class TagDocumentationProvider implements DocumentationProvider {
             return (XmlTag) originalElement;
         } else if (originalElement != null && originalElement.getParent() instanceof XmlTag) {
             return (XmlTag) originalElement.getParent();
+        }
+        return null;
+    }
+
+    private XmlText getXmlText(PsiElement element, @Nullable PsiElement originalElement){
+        if (element instanceof XmlText) {
+            return (XmlText) element;
+        } else if (originalElement instanceof XmlText) {
+            return (XmlText) originalElement;
+        } else if (originalElement != null && originalElement.getParent() instanceof XmlText) {
+            return (XmlText) originalElement.getParent();
         }
         return null;
     }

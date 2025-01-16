@@ -109,6 +109,7 @@ public class StartProjectComponent implements ProjectComponent {
         logSkippedClasses(project, skippedResponses, CLASS_IS_NOT_DATAMODEL, "- Not datamodel classes ({count}): {classes}");
         logSkippedClasses(project, skippedResponses, CLASS_IS_MAPPED, "- Mapped classes ({count}): {classes}");
         logSkippedClasses(project, skippedResponses, CLASS_IS_INNER, "- Inner classes ({count}): {classes}");
+        logSkippedClasses(project, skippedResponses, CLASS_IS_ENUM, "- Enum classes ({count}): {classes}");
         logSkippedClasses(project, skippedResponses, CANNOT_GET_QUALIFIED_NAME, "- Could not get qualified name ({count}): {classes}");
         logSkippedClasses(project, skippedResponses, CANNOT_GET_DATAMODEL_TAG, "- Could not get datamodel tag ({count}): {classes}");
 

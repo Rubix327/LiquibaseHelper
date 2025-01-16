@@ -19,7 +19,7 @@ public class TagRule {
 
     // Constraints
     private String type;
-    private int maxLength = -1;
+    private int maxLength = 0;
     private boolean isRequired;
     private List<AvailableValue> availableValues = new ArrayList<>();
 

@@ -45,18 +45,15 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
                 super.visitClass(psiClass);
 
                 // Проверка на то, что текущий класс является воркером (наследником от CbsWorker)
-                if (psiClass.getSuperClass() == null) return;
-                PsiClass cbsWorkerClass = findCbsWorkerClassPointer(psiClass);
-                if (cbsWorkerClass == null) return;
-                if (!psiClass.isInheritor(cbsWorkerClass, true)) return;
+                if (isClassNotWorker(psiClass)) return;
 
                 // Ищем метод List<ProcessVariableDefinition> defineVariables
                 PsiMethod defineVariablesMethod = getDefineVariablesMethod(psiClass, 0);
                 if (defineVariablesMethod == null) return; // Метод не определен
 
                 // Извлекаем все ключи из метода defineVariables
-                ProcessVariablesKeys keys = parseDefineVariables(defineVariablesMethod);
-                MainLogger.info(psiClass.getProject(), "Worker %s process variables keys: %s", psiClass.getName(), keys);
+                ProcessVariablesKeys keys = parseDefineVariables(psiClass, defineVariablesMethod);
+                MainLogger.info(psiClass.getProject(), "Worker %s process variables keys: %s", psiClass.getName(), keys.toShortString());
 
                 psiClass.accept(new PsiRecursiveElementVisitor() {
                     @Override
@@ -93,15 +90,26 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
 
                 // Проверка на то, чтобы текущая переменная была объявлена внутри defineVariables с подходящим направлением
                 if ("get".equals(methodName) && !keys.hasInput(key)){
-                    Utils.registerError(holder, ProblemHighlightType.WARNING, quickFix, keyExpression, Localization.message("processVariables.warn.value-not-defined", key, "INPUT"));
+                    Utils.registerWarning(holder, keyExpression, quickFix, Localization.message("processVariables.warn.value-not-defined", key, "INPUT"));
                 }
                 else if ("put".equals(methodName) && !keys.hasOutput(key)){
-                    Utils.registerError(holder, ProblemHighlightType.WARNING, quickFix, keyExpression, Localization.message("processVariables.warn.value-not-defined", key, "OUTPUT"));
+                    Utils.registerWarning(holder, keyExpression, quickFix, Localization.message("processVariables.warn.value-not-defined", key, "OUTPUT"));
                 }
             }
 
         };
 
+    }
+
+    /**
+     * Является ли указанный класс воркером
+     */
+    private boolean isClassNotWorker(@NotNull PsiClass psiClass){
+        // Проверка на то, что текущий класс является воркером (наследником от CbsWorker)
+        if (psiClass.getSuperClass() == null) return true;
+        PsiClass cbsWorkerClass = findCbsWorkerClassPointer(psiClass);
+        if (cbsWorkerClass == null) return true;
+        return !psiClass.isInheritor(cbsWorkerClass, true);
     }
 
     /**
@@ -131,7 +139,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
      * Идем последовательно от выражения return к объявлению списка и парсим объявления ProcessVariablesDefinitions.
      */
     @NotNull
-    private ProcessVariablesKeys parseDefineVariables(@NotNull PsiMethod method) {
+    private ProcessVariablesKeys parseDefineVariables(@NotNull PsiClass containingClass, @NotNull PsiMethod method) {
         ProcessVariablesKeys keys = new ProcessVariablesKeys();
 
         // Извлекаем тело метода
@@ -153,11 +161,11 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
         if (returnValue != null) {
             // Если значение return это ссылка на другую переменную
             if (returnValue instanceof PsiReferenceExpression referenceExpression) {
-                return extractFromReference(referenceExpression);
+                return extractFromReference(containingClass, referenceExpression);
             }
             // Если значение return это вызов метода
             if (returnValue instanceof PsiMethodCallExpression methodCall) {
-                return extractFromMethodCall(methodCall);
+                return extractFromMethodCall(containingClass, methodCall, null);
             }
             // Упускаем ситуацию, где в return возвращается выражение 'new'
         }
@@ -170,7 +178,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
      * Парсим ссылку на другую переменную. Значение ссылки может быть другой ссылкой, вызовом метода или выражением 'new'
      */
     @NotNull
-    private ProcessVariablesKeys extractFromReference(@NotNull PsiReferenceExpression referenceExpression){
+    private ProcessVariablesKeys extractFromReference(@NotNull PsiClass containingClass, @NotNull PsiReferenceExpression referenceExpression){
         var resolvedElement = referenceExpression.resolve();
         if (resolvedElement instanceof PsiLocalVariable localVariable){
             PsiExpression localVariableValue = localVariable.getInitializer();
@@ -179,32 +187,34 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
             boolean isNewInstance = "ProcessVariableDefinition".equals(localVariable.getType().getPresentableText());
 
             // Если значение переменной это ссылка на другую переменную, то идем к ней (рекурсивно)
-            // List<ProcessVariableDefinition> list = anotherList;
-            // ProcessVariableDefinition definition = anotherDefinition;
+            // >> List<ProcessVariableDefinition> list = anotherList;
+            // >> ProcessVariableDefinition definition = anotherDefinition;
             if (localVariableValue instanceof PsiReferenceExpression anotherReferenceExpression){
-                return extractFromReference(anotherReferenceExpression);
+                return extractFromReference(containingClass, anotherReferenceExpression);
             }
 
-            // Если это создание списка через вызов метода (List.of, Arrays.asList), то парсим тело метода
-            // List<ProcessVariableDefinition> list = List.of(...)
+            // Если это создание списка через вызов метода (List.of, Arrays.asList), то парсим тело метода:
+            // >> List<ProcessVariableDefinition> list = List.of(...)
+            // Если это создание списка через 'super.defineVariables()', то собираем переменные из родителя и добавления через 'add':
+            // >> List<ProcessVariableDefinition> processVariableDefinitions = super.defineVariables();
             if (isList && localVariableValue instanceof PsiMethodCallExpression methodCallExpression){
-                return extractFromMethodCall(methodCallExpression);
+                return extractFromMethodCall(containingClass, methodCallExpression, localVariable);
             }
 
             // Если это создание списка через 'new', то парсим готовый список и собираем все элементы, добавленные через 'add'
-            // List<ProcessVariableDefinition> list = new ArrayList<>(); list.add(...); list.add(...)
+            // >> List<ProcessVariableDefinition> list = new ArrayList<>(); list.add(...); list.add(...)
             if (isList && localVariableValue instanceof PsiNewExpression){
-                return extractFromNewList(localVariable);
+                return extractFromNewList(containingClass, localVariable);
             }
 
             // Если это создание нового экземпляра, то сразу извлекаем ключи из этого экземпляра
-            // ProcessVariableDefinition def = new ProcessVariableDefinition(...)
+            // >> ProcessVariableDefinition def = new ProcessVariableDefinition(...)
             if (isNewInstance && localVariableValue instanceof PsiNewExpression newExpression){
                 return extractKeyFromNewInstance(newExpression);
             }
 
             // Если это создание экземпляра с withScope, то достаем оттуда создание экземпляра и извлекаем ключи
-            // ProcessVariableDefinition def = new ProcessVariableDefinition(...).withScope()
+            // >> ProcessVariableDefinition def = new ProcessVariableDefinition(...).withScope()
             if (isNewInstance && localVariableValue instanceof PsiMethodCallExpression innerMethodCall){
                 if (innerMethodCall.getMethodExpression().getQualifierExpression() instanceof PsiNewExpression newExpression){
                     return extractKeyFromNewInstance(newExpression);
@@ -217,15 +227,13 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
     }
 
     /**
-     * Извлекаем ключи из ProcessVariableDefinition внутри статических списков.
-     * <ul>
-     *     <li>return List.of(...)</li>
-     *     <li>return Arrays.asList(...)</li>
-     *     <li>return Collections.singletonList(...)</li>
+     * Извлечь ключи из вызова метода.
+     * Запускает два метода в зависимости от разных условий:<ul>
+     *     <li>{@link #extractFromSuperMethodCall(PsiClass, PsiLocalVariable)}</li>
+     *     <li>{@link #extractFromDeclaredMethodCall(PsiClass, PsiMethodCallExpression)}</li>
      * </ul>
      */
-    @NotNull
-    private ProcessVariablesKeys extractFromMethodCall(@NotNull PsiMethodCallExpression methodCall){
+    private ProcessVariablesKeys extractFromMethodCall(@NotNull PsiClass psiClass, @NotNull PsiMethodCallExpression methodCall, @Nullable PsiLocalVariable localVariable){
         ProcessVariablesKeys keys = new ProcessVariablesKeys();
 
         PsiReferenceExpression methodExpression = methodCall.getMethodExpression();
@@ -235,29 +243,75 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
             return keys;
         }
 
+        String qualifierAndMethod = qualifier.getText() + "." + methodName;
+
+        // Обрабатываем вызов 'defineVariables' из родительского класса
+        if ("super.defineVariables".equals(qualifierAndMethod)){
+            PsiClass superClass = psiClass.getSuperClass();
+            if (superClass == null) return keys;
+            return extractFromSuperMethodCall(psiClass, localVariable);
+        }
         // Обрабатываем только популярные конструкторы списков, которые принимают в аргументы сразу значения.
         // Вызовы любых других методов упускаем.
-        String qualifierAndMethod = qualifier.getText() + "." + methodName;
-        List<String> available = List.of(
-                "List.of", "Arrays.asList", "Collections.singletonList"
-        );
+        else if (List.of("List.of", "Arrays.asList", "Collections.singletonList").contains(qualifierAndMethod)){
+            return extractFromDeclaredMethodCall(psiClass, methodCall);
+        }
 
-        if (available.contains(qualifierAndMethod)){
-            for (PsiExpression argument : methodCall.getArgumentList().getExpressions()) {
-                // Обработка обычных случаев (добавляется новый экземпляр ProcessVariableDefinition)
-                if (argument instanceof PsiNewExpression newExpression){
+        return keys;
+    }
+
+    /**
+     * Извлечь ключи из метода 'defineVariables' из родителя указанного класса.
+     * @param psiClass Класс, от которого берем родителя
+     * @param localVariable Переменная, для которой нужно дополнительно собрать ключи из методов add (необязательная)
+     * @return Ключи
+     */
+    private ProcessVariablesKeys extractFromSuperMethodCall(@NotNull PsiClass psiClass, @Nullable PsiLocalVariable localVariable){
+        ProcessVariablesKeys keys = new ProcessVariablesKeys();
+
+        PsiClass superClass = psiClass.getSuperClass();
+        if (superClass == null) return keys;
+        if (isClassNotWorker(superClass)) return keys;
+
+        // Ищем метод List<ProcessVariableDefinition> defineVariables
+        PsiMethod defineVariablesMethod = getDefineVariablesMethod(superClass, 0);
+        if (defineVariablesMethod == null) return keys; // Метод не определен
+
+        // Извлекаем все ключи из метода defineVariables
+        keys = parseDefineVariables(superClass, defineVariablesMethod);
+        if (localVariable != null){
+            keys.merge(extractFromNewList(superClass, localVariable));
+        }
+
+        return keys;
+    }
+
+    /**
+     * Извлекаем ключи из ProcessVariableDefinition внутри статических списков.
+     * <ul>
+     *     <li>return List.of(...)</li>
+     *     <li>return Arrays.asList(...)</li>
+     *     <li>return Collections.singletonList(...)</li>
+     * </ul>
+     */
+    @NotNull
+    private ProcessVariablesKeys extractFromDeclaredMethodCall(@NotNull PsiClass containingClass, @NotNull PsiMethodCallExpression methodCall){
+        ProcessVariablesKeys keys = new ProcessVariablesKeys();
+
+        for (PsiExpression argument : methodCall.getArgumentList().getExpressions()) {
+            // Обработка обычных случаев (добавляется новый экземпляр ProcessVariableDefinition)
+            if (argument instanceof PsiNewExpression newExpression){
+                keys.merge(extractKeyFromNewInstance(newExpression));
+            }
+            // Если используется .withScope и другие builder-методы
+            else if (argument instanceof PsiMethodCallExpression innerMethodCall){
+                if (innerMethodCall.getMethodExpression().getQualifierExpression() instanceof PsiNewExpression newExpression){
                     keys.merge(extractKeyFromNewInstance(newExpression));
                 }
-                // Если используется .withScope и другие builder-методы
-                else if (argument instanceof PsiMethodCallExpression innerMethodCall){
-                    if (innerMethodCall.getMethodExpression().getQualifierExpression() instanceof PsiNewExpression newExpression){
-                        keys.merge(extractKeyFromNewInstance(newExpression));
-                    }
-                }
-                // Если подставлена готовая переменная, хранящая ProcessVariableDefinition
-                else if (argument instanceof PsiReferenceExpression referenceExpression){
-                    keys.merge(extractFromReference(referenceExpression));
-                }
+            }
+            // Если подставлена готовая переменная, хранящая ProcessVariableDefinition
+            else if (argument instanceof PsiReferenceExpression referenceExpression){
+                keys.merge(extractFromReference(containingClass, referenceExpression));
             }
         }
 
@@ -274,7 +328,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
      * </pre>
      */
     @NotNull
-    private ProcessVariablesKeys extractFromNewList(@NotNull PsiLocalVariable localVariable){
+    private ProcessVariablesKeys extractFromNewList(@NotNull PsiClass containingClass, @NotNull PsiLocalVariable localVariable){
         ProcessVariablesKeys keys = new ProcessVariablesKeys();
 
         // Тип переменной должен быть список из ProcessVariableDefinition
@@ -304,7 +358,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
                     }
                     // Если в список добавляется готовая переменная
                     if (arguments[0] instanceof PsiReferenceExpression refExpression){
-                        keys.merge(extractFromReference(refExpression));
+                        keys.merge(extractFromReference(containingClass, refExpression));
                     }
                 }
             }
@@ -339,7 +393,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
     }
 
     /**
-     * Извлечь значения ключа из выражения.
+     * Извлечь значение ключа из выражения.
      */
     @Nullable
     private String resolveStringValue(@NotNull PsiExpression expression) {

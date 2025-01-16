@@ -49,4 +49,11 @@ public class ProcessVariablesKeys {
         this.output.addAll(processVariablesKeys.output);
     }
 
+    public String toShortString() {
+        return "{" +
+                "input=" + input +
+                ", output=" + output +
+                '}';
+    }
+
 }

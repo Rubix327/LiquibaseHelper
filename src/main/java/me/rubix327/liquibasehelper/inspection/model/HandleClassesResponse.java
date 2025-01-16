@@ -2,6 +2,7 @@ package me.rubix327.liquibasehelper.inspection.model;
 
 import com.intellij.psi.PsiClass;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
@@ -23,7 +24,7 @@ public class HandleClassesResponse {
         return this;
     }
 
-    public HandleClassesResponse setMessage(String message, Object... args) {
+    public HandleClassesResponse setMessage(@NotNull String message, Object... args) {
         this.message = String.format(message, args).replace("{class}", baseClass.getName() == null ? "null" : baseClass.getName());
         return this;
     }
@@ -33,20 +34,21 @@ public class HandleClassesResponse {
         return this;
     }
 
-    public static HandleClassesResponse makeErrorResponse(PsiClass psiClass, ErrorReason errorReason){
-        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(errorReason.name()).setErrorReason(errorReason);
+    public static HandleClassesResponse makeErrorResponse(@NotNull PsiClass psiClass, @NotNull ErrorReason errorReason){
+        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(errorReason.getMessage()).setErrorReason(errorReason);
     }
 
-    public static HandleClassesResponse makeErrorResponse(PsiClass psiClass, ErrorReason errorReason, String message, Object... args){
-        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(message, args).setErrorReason(errorReason);
-    }
-
+    @Getter
+    @RequiredArgsConstructor
     public enum ErrorReason{
-        CLASS_IS_NOT_DATAMODEL,
-        CLASS_IS_MAPPED,
-        CLASS_IS_INNER,
-        CANNOT_GET_QUALIFIED_NAME,
-        CANNOT_GET_DATAMODEL_TAG
+        CLASS_IS_NOT_DATAMODEL("Skipping class {class} (not a datamodel class)."),
+        CLASS_IS_MAPPED("Skipping class {class} (the class is mapped)."),
+        CLASS_IS_INNER("Skipping class {class} (the class is inner)."),
+        CLASS_IS_ENUM("Skipping class {class} (the class is enum)."),
+        CANNOT_GET_QUALIFIED_NAME("Skipping class {class} (could not get qualified name of class)."),
+        CANNOT_GET_DATAMODEL_TAG("Skipping class {class} (could not get datamodel tag of class).");
+
+        private final String message;
     }
 
 }

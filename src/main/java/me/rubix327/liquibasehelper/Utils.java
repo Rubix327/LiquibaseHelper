@@ -13,20 +13,22 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.*;
+import com.intellij.psi.codeStyle.JavaCodeStyleManager;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.util.lang.UrlClassLoader;
-import me.rubix327.liquibasehelper.settings.CbsAnnotation;
-import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,53 +39,61 @@ import static me.rubix327.liquibasehelper.settings.StaticSettings.ERRORS_HIGHLIG
 @SuppressWarnings("unused")
 public class Utils {
 
-    public static final List<String> DATE_FORMATS = new ArrayList<>(){{
-        add("dd.MM.yyyy");
+    public static final List<String> DATE_TIME_PATTERNS = new ArrayList<>(){{
         add("dd.MM.yyyy HH:mm:ss");
         add("dd.MM.yyyy'T'HH:mm:ss");
         add("dd.MM.yyyy HH:mm:ssXXX");
         add("dd.MM.yyyy'T'HH:mm:ssXXX");
 
-        add("dd-MM-yyyy");
         add("dd-MM-yyyy HH:mm:ss");
         add("dd-MM-yyyy'T'HH:mm:ss");
         add("dd-MM-yyyy HH:mm:ssXXX");
         add("dd-MM-yyyy'T'HH:mm:ssXXX");
 
-        add("yyyy.MM.dd");
         add("yyyy.MM.dd HH:mm:ss");
         add("yyyy.MM.dd'T'HH:mm:ss");
         add("yyyy.MM.dd HH:mm:ssXXX");
         add("yyyy.MM.dd'T'HH:mm:ssXXX");
 
-        add("yyyy-MM-dd");
         add("yyyy-MM-dd HH:mm:ss");
         add("yyyy-MM-dd'T'HH:mm:ss");
         add("yyyy-MM-dd HH:mm:ssXXX");
         add("yyyy-MM-dd'T'HH:mm:ssXXX");
     }};
 
+    public static final List<String> DATE_PATTERNS = new ArrayList<>(){{
+        add("dd.MM.yyyy");
+        add("dd-MM-yyyy");
+        add("yyyy.MM.dd");
+        add("yyyy-MM-dd");
+    }};
+
     /**
      * Открыть файл с курсором в начале
      */
-    public static void openFile(Project project, VirtualFile file) {
+    public static void openFile(@NotNull Project project, VirtualFile file) {
+        if (file == null || !file.isValid()) return;
         ApplicationManager.getApplication().invokeLater(() -> FileEditorManager.getInstance(project).openFile(file, true));
     }
 
     /**
      * Открыть файл с курсором на указанном элементе
      */
-    public static void openFile(Project project, PsiElement element){
+    public static void openFile(@NotNull Project project, PsiElement element){
         openFile(project, element, element.getTextOffset());
     }
 
-    public static void openFile(Project project, PsiElement element, int textOffset){
+    public static void openFile(@NotNull Project project, PsiElement element, int textOffset){
         ApplicationManager.getApplication().invokeLater(() -> {
             VirtualFile virtualFile;
             if (element instanceof PsiFile psiFile) {
                 virtualFile = psiFile.getVirtualFile();
             } else {
-                virtualFile = element.getContainingFile().getVirtualFile();
+                try {
+                    virtualFile = element.getContainingFile().getVirtualFile();
+                } catch (PsiInvalidElementAccessException ignored){
+                    return;
+                }
             }
             new OpenFileDescriptor(project, virtualFile, textOffset).navigate(true);
         });
@@ -157,6 +167,14 @@ public class Utils {
         return psiFacade.findClass(qualifiedName, GlobalSearchScope.allScope(project));
     }
 
+    public static PsiFile findClassPsiFileByQualifiedName(Project project, String qualifiedName){
+        PsiClass psiClass = findPsiClassByQualifiedName(project, qualifiedName);
+        if (psiClass != null) {
+            return psiClass.getContainingFile();
+        }
+        return null;
+    }
+
     @Nullable
     public static PsiFile findPsiFileByQualifiedName(Project project, String qualifiedName) {
         PsiClass psiClass = findPsiClassByQualifiedName(project, qualifiedName);
@@ -222,48 +240,6 @@ public class Utils {
         return UrlClassLoader.build().files(paths).get();
     }
 
-    /**
-     * Найти аннотацию над объектом.<br><br>
-     * Если на вход подается полный путь аннотации, то она ищется по полному совпадению.<br>
-     * Если на вход подается только название аннотации, то она ищется по вхождению в QuilifiedName каждой аннотации над полем.
-     * @param annotationHolder Объект, над которым может висеть аннотация
-     * @param annotationName Название аннотации или полный путь до нее (qualifiedName)
-     * @return Аннотация PsiAnnotation
-     */
-    @Deprecated(forRemoval = true)
-    public static PsiAnnotation findAnnotation(@NotNull PsiJvmModifiersOwner annotationHolder, @NotNull String annotationName){
-        if (annotationName.contains(".")){
-            return annotationHolder.getAnnotation(annotationName);
-        }
-
-        for (PsiAnnotation annotation : annotationHolder.getAnnotations()) {
-            String qualifiedName = annotation.getQualifiedName();
-            if (qualifiedName == null) continue;
-
-            if (qualifiedName.contains(annotationName)){
-                return annotation;
-            }
-        }
-        return null;
-    }
-
-    @Nullable
-    public static PsiAnnotation findAnnotation(@NotNull PsiJvmModifiersOwner annotationHolder, @NotNull CbsAnnotation cbsAnnotation){
-        if (StaticSettings.SEARCH_ANNOTATION_BY_QUALIFIED_NAME){
-            return annotationHolder.getAnnotation(cbsAnnotation.getQualifiedName());
-        }
-
-        for (PsiAnnotation annotation : annotationHolder.getAnnotations()) {
-            String qualifiedName = annotation.getQualifiedName();
-            if (qualifiedName == null) continue;
-
-            if (qualifiedName.contains(cbsAnnotation.getShortName())){
-                return annotation;
-            }
-        }
-        return null;
-    }
-
     public static boolean isBlank(@Nullable String string){
         return string == null || string.isBlank();
     }
@@ -280,75 +256,16 @@ public class Utils {
         return !isEmpty(collection);
     }
 
-    private static boolean isClassInvalid(@Nullable PsiClass psiClass){
-        if (psiClass == null) return true;
-        if (Object.class.getName().equals(psiClass.getQualifiedName())) return true;
-        if (psiClass.getQualifiedName() == null || !psiClass.getQualifiedName().contains(".metaloader.")) return true;
-        return psiClass.getContainingClass() != null;
-    }
-
-    /**
-     * Проверить, что класс не является CbsDatamodelClass.<br>
-     * Если этот метод возвращает true, то это гарантирует, что как минимум одно из следующих условий верно:<ul>
-     * <li>Указанный psiClass == null</li>
-     * <li>У указанного psiClass нет qualifiedName</li>
-     * <li>Указанный psiClass не находится в пакете metaloader</li>
-     * <li>Указанный psiClass вложен в другие классы</li>
-     * <li>Указанный psiClass является перечислением (enum)</li>
-     * <li>Над указанным psiClass нет аннотации @CbsDatamodelClass</li>
-     * </ul>
-     */
-    public static boolean isNotDatamodelClass(@Nullable PsiClass psiClass){
-        if (isClassInvalid(psiClass)) return true;
-        if (psiClass.isEnum()) return true;
-        return Utils.findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE) == null;
-    }
-
-    public static boolean isDatamodelMappedClass(@Nullable PsiClass psiClass){
-        if (isClassInvalid(psiClass)) return false;
-        PsiAnnotation annotation = Utils.findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE);
-        if (annotation == null) return false;
-        PsiAnnotationMemberValue isMappedMember = annotation.findDeclaredAttributeValue(CbsAnnotation.CbsDatamodelClass.Fields.MAPPED);
-        if (isMappedMember instanceof PsiLiteralExpression isMappedBoolean){
-            if (isMappedBoolean.getValue() instanceof Boolean isMappedValue){
-                return isMappedValue;
-            }
-        }
-        return false;
-    }
-
-    @Nullable
-    public static String getCbsDatamodelClassAnnotationFieldValue(@NotNull PsiClass psiClass, String field){
-        if (isNotDatamodelClass(psiClass)) return null;
-        return getAnnotationFieldValue(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE, field);
-    }
-
-    @Nullable
-    public static String getAnnotationFieldValue(@NotNull PsiClass psiClass, CbsAnnotation annotation, String fieldName){
-        PsiAnnotation psiAnnotation = Utils.findAnnotation(psiClass, annotation);
-        if (psiAnnotation == null){
-            return null;
-        }
-
-        PsiAnnotationMemberValue tooltip = psiAnnotation.findDeclaredAttributeValue(fieldName);
-        if (tooltip instanceof PsiLiteralExpression tooltipString){
-            if (tooltipString.getValue() instanceof String fieldValue && Utils.isNotBlank(fieldValue)){
-                return fieldValue;
-            }
-        }
-        return null;
-    }
-
     public static boolean isClassAndFileNamesNotMatch(@NotNull PsiClass psiClass){
         String containingFileName = psiClass.getContainingFile().getName();
         String classQName = psiClass.getQualifiedName();
         if (classQName == null) return true;
         if (!classQName.contains(".")) return true;
 
-        return !classQName.substring(classQName.lastIndexOf(".") + 1).equals(containingFileName
-                .replace(".java", "")
-                .replace(".class", "")
-        );
+        String classShortName = classQName.substring(classQName.lastIndexOf(".") + 1);
+        String fileShortName = containingFileName.replace(".java", "").replace(".class", "");
+
+        return !classShortName.equals(fileShortName);
     }
 
     @NotNull
@@ -374,16 +291,20 @@ public class Utils {
         return null; // Если не нашли значимых строк
     }
 
+    public static void registerProblem(ProblemsHolder holder, PsiElement element, ProblemHighlightType highlightType, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), highlightType);
+    }
+
+    public static void registerProblem(ProblemsHolder holder, PsiElement element, ProblemHighlightType highlightType, LocalQuickFix quickFix, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), highlightType, quickFix);
+    }
+
     public static void registerError(ProblemsHolder holder, PsiElement element, String errorText, Object... args){
         holder.registerProblem(element, String.format(errorText, args), ERRORS_HIGHLIGHT_TYPE);
     }
 
-    public static void registerError(ProblemsHolder holder, ProblemHighlightType highlightType, PsiElement element, String errorText, Object... args){
-        holder.registerProblem(element, String.format(errorText, args), highlightType);
-    }
-
-    public static void registerError(ProblemsHolder holder, ProblemHighlightType highlightType, LocalQuickFix quickFix, PsiElement element, String errorText, Object... args){
-        holder.registerProblem(element, String.format(errorText, args), highlightType, quickFix);
+    public static void registerError(ProblemsHolder holder, PsiElement element, LocalQuickFix fix, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), ERRORS_HIGHLIGHT_TYPE, fix);
     }
 
     public static void registerErrorOnElement(ProblemsHolder holder, XmlTag tag, String errorText){
@@ -395,15 +316,38 @@ public class Utils {
         holder.registerProblem(element, errorText, ERRORS_HIGHLIGHT_TYPE);
     }
 
+    public static void registerWarning(ProblemsHolder holder, PsiElement element, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), ProblemHighlightType.WARNING);
+    }
+
+    public static void registerWarning(ProblemsHolder holder, PsiElement element, LocalQuickFix quickFix, String errorText, Object... args){
+        holder.registerProblem(element, String.format(errorText, args), ProblemHighlightType.WARNING, quickFix);
+    }
+
     public static boolean isDate(String s){
-        for (String dateFormat : DATE_FORMATS) {
+        return getDate(s) != null;
+    }
+
+    public static boolean isClassOfAnyType(@NotNull PsiClass psiClass, @NotNull Class<?>... types){
+        return Arrays.stream(types).map(Class::getName).anyMatch(t -> t.equals(psiClass.getQualifiedName()));
+    }
+
+    public static LocalDateTime getDate(String s){
+        for (String dateFormat : DATE_TIME_PATTERNS) {
             try{
-                if (new SimpleDateFormat(dateFormat).parse(s) != null) {
-                    return true;
-                }
-            } catch (ParseException ignored){}
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+
+                return LocalDateTime.parse(s, formatter);
+            } catch (DateTimeParseException ignored){}
         }
-        return false;
+        for (String dateFormat : DATE_PATTERNS){
+            try{
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+                LocalDate ld = LocalDate.parse(s, formatter);
+                return LocalDateTime.of(ld, LocalTime.of(0, 0, 0));
+            } catch (DateTimeParseException ignored){}
+        }
+        return null;
     }
 
     public static void runReadActionInBackground(@NotNull Project project, @NotNull String title, Runnable runnable){
@@ -413,6 +357,13 @@ public class Utils {
                 ApplicationManager.getApplication().runReadAction(runnable);
             }
         });
+    }
+
+    public static void optimizeImports(@NotNull Project project, @NotNull PsiFile file) {
+        if (file instanceof PsiJavaFile) {
+            JavaCodeStyleManager styleManager = JavaCodeStyleManager.getInstance(project);
+            styleManager.optimizeImports(file);
+        }
     }
 
 }

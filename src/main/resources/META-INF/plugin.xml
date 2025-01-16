@@ -24,24 +24,24 @@
                          groupKey="group.names.probable.bugs"
                          enabledByDefault="true"
                          runForWholeFile="true"
-                         displayName="XmlTagValuesInspection"
-                         shortName="XmlTagValuesInspector"
+                         displayName="XmlTagValuesInspections"
+                         shortName="XmlTagValuesInspections"
                          groupName="XML checks"/>
         <localInspection language="JAVA" implementationClass="me.rubix327.liquibasehelper.inspection.AnnotationInspector"
                          groupBundle="messages.InspectionsBundle"
                          groupKey="group.names.probable.bugs"
                          enabledByDefault="true"
                          runForWholeFile="true"
-                         displayName="AnnotationInspector"
-                         shortName="AnnotationInspector"
+                         displayName="CbsDatamodelInspections"
+                         shortName="CbsDatamodelInspections"
                          groupName="Java checks"/>
         <localInspection language="JAVA" implementationClass="me.rubix327.liquibasehelper.inspection.ProcessVariablesInspector"
                          groupBundle="messages.InspectionsBundle"
                          groupKey="group.names.probable.bugs"
                          enabledByDefault="true"
                          runForWholeFile="true"
-                         displayName="ProcessVariablesInspector"
-                         shortName="ProcessVariablesInspector"
+                         displayName="ProcessVariablesInspections"
+                         shortName="ProcessVariablesInspections"
                          groupName="Java checks"/>
         <documentationProvider implementation="me.rubix327.liquibasehelper.docs.TagDocumentationProvider"/>
         <completion.contributor implementationClass="me.rubix327.liquibasehelper.completion.TagCompletionContributor" language="XML"/>
@@ -50,10 +50,13 @@
     </extensions>
 
     <actions>
-        <group id="LiquibaseHelper.Menu" text="LiquibaseHelper" description="LiquibaseHelper">
-            <add-to-group group-id="MainMenu" anchor="last"/>
-            <action class="me.rubix327.liquibasehelper.form.OpenActionsMenuAction" id="LiquibaseHelper.Actions.MenuAction" text="Actions..."/>
-        </group>
+        <action id="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
+                class="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
+                icon="AllIcons.Providers.Liquibase"
+                text="LiquibaseHelper"
+                description="Show LiquibaseHelper actions">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
     </actions>
 
     <projectListeners>

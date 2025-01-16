@@ -133,45 +133,44 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
             return;
         }
 
-        if (!tagText.isEmpty()){
-            // Проверка на целое число
-            if (Long.class.getTypeName().equals(rule.getType())){
-                try{
-                    Long.parseLong(tagText);
-                } catch (NumberFormatException e){
-                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-integer"));
-                }
+        if (tagText.isEmpty()) return;
+
+        // Проверка на целое число
+        if (Long.class.getTypeName().equals(rule.getType())){
+            try{
+                Long.parseLong(tagText);
+            } catch (NumberFormatException e){
+                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-integer"));
             }
-            // Проверка на число с плавающей точкой
-            if (Double.class.getTypeName().equals(rule.getType())){
-                try{
-                    Double.parseDouble(tagText);
-                } catch (NumberFormatException e){
-                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-double"));
-                }
+        }
+        // Проверка на число с плавающей точкой
+        else if (Double.class.getTypeName().equals(rule.getType())){
+            try{
+                Double.parseDouble(tagText);
+            } catch (NumberFormatException e){
+                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-double"));
             }
-            // Проверка на 0, 1
-            else if (Boolean.class.getTypeName().equals(rule.getType())){
-                if (!List.of("0", "1").contains(tagText)){
-                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-boolean"));
-                }
+        }
+        // Проверка на 0, 1
+        else if (Boolean.class.getTypeName().equals(rule.getType())){
+            if (!List.of("0", "1").contains(tagText)){
+                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-boolean"));
             }
-            // Проверка на дату
-            else if (Date.class.getTypeName().equals(rule.getType())){
-                if (!Utils.isDate(tagText)){
-                    Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-date"));
-                }
+        }
+        // Проверка на дату
+        else if (Date.class.getTypeName().equals(rule.getType())){
+            if (!Utils.isDate(tagText)){
+                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-date"));
             }
         }
 
         // Проверка на допустимые значения
         // Не заполняются при type=Boolean
-        if (!tagText.isEmpty()){
-            List<String> availableValuesStrings = rule.getAvailableValues().stream().map(AvailableValue::getValue).toList();
-            if (Utils.isNotEmpty(rule.getAvailableValues()) && !availableValuesStrings.contains(tagText)){
-                Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-following", availableValuesStrings));
-            }
+        List<String> availableValuesStrings = rule.getAvailableValues().stream().map(AvailableValue::getValue).toList();
+        if (Utils.isNotEmpty(rule.getAvailableValues()) && !availableValuesStrings.contains(tagText)){
+            Utils.registerErrorOnValueOrTag(holder, tag, Localization.message("tag.warn.must-be-following", availableValuesStrings));
         }
+
     }
 
     /**

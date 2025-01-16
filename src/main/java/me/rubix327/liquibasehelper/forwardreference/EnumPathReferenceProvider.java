@@ -7,7 +7,6 @@ import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiReferenceBase;
 import com.intellij.psi.search.GlobalSearchScope;
-import org.jetbrains.annotations.NotNull;
 
 class EnumPathReferenceProvider extends PsiReferenceBase<PsiElement> {
 
@@ -33,9 +32,4 @@ class EnumPathReferenceProvider extends PsiReferenceBase<PsiElement> {
         return javaPsiFacade.findPackage(qualifiedName);
     }
 
-    @Override
-    public Object @NotNull [] getVariants() {
-        // Если нужно, предоставьте варианты автодополнения
-        return new Object[0];
-    }
 }

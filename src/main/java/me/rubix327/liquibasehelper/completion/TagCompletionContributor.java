@@ -63,7 +63,7 @@ public class TagCompletionContributor extends CompletionContributor {
                                 }
 
                                 MainLogger.info(instance.getProject(), "Applying autocomplete options for tag %s: %s, excluding %s.",
-                                        rulesContainer.getParentTagName(), rulesContainer.getTagRules().stream().map(TagRule::getTagTooltip).toList(), existingSubTags);
+                                        rulesContainer.getParentTagName(), rulesContainer.getTagRules().stream().map(TagRule::getTagName).toList(), existingSubTags);
 
                                 // Добавляем в автокомплит только те теги, которые еще не объявлены
                                 for (TagRule tagRule : rulesContainer.getTagRules()) {
