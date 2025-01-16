@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugins>
+    <plugin
+            id="me.rubix327.liquibasehelper"
+            url="https://github.com/Rubix327/LiquibaseHelper/tree/main/src/main/resources/update/LiquibaseHelper-1.0.24.jar"
+            version="1.0.24">
+        <idea-version since-build="223" until-build="243.*"/>
+    </plugin>
+</plugins>
