@@ -91,46 +91,20 @@ public class StartProjectComponent implements ProjectComponent {
         rulesManagerInstance.resetAll();
         Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
 
-        List<HandleClassesResponse> skippedResponses = new ArrayList<>();
         MainLogger.info(project, "Registering project-level rules...");
         MainLogger.info(project, 1, "Registered rules for classes:");
         for (PsiClass psiClass : allClasses) {
-            HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass);
+            HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass, "StartProjectComponent: project");
             if (response.isSuccess()){
                 MainLogger.info(project, 2, response.getMessage());
-            } else {
-                skippedResponses.add(response);
             }
         }
-
-        if (!skippedResponses.isEmpty()){
-            MainLogger.info(project, 1, "Skipped classes (%s):", skippedResponses.size());
-        }
-        logSkippedClasses(project, skippedResponses, CLASS_IS_NOT_DATAMODEL, "- Not datamodel classes ({count}): {classes}");
-        logSkippedClasses(project, skippedResponses, CLASS_IS_MAPPED, "- Mapped classes ({count}): {classes}");
-        logSkippedClasses(project, skippedResponses, CLASS_IS_INNER, "- Inner classes ({count}): {classes}");
-        logSkippedClasses(project, skippedResponses, CLASS_IS_ENUM, "- Enum classes ({count}): {classes}");
-        logSkippedClasses(project, skippedResponses, CANNOT_GET_QUALIFIED_NAME, "- Could not get qualified name ({count}): {classes}");
-        logSkippedClasses(project, skippedResponses, CANNOT_GET_DATAMODEL_TAG, "- Could not get datamodel tag ({count}): {classes}");
 
         projectsRegisteredToUpdateRules.remove(project.getBasePath());
         MainLogger.info(project, "Project-level rules have been registered.");
 
         registerRulesFromDependencies(rulesManagerInstance);
         rulesManagerInstance.printAllRules();
-    }
-
-    private static void logSkippedClasses(Project project, List<HandleClassesResponse> responses, HandleClassesResponse.ErrorReason errorReason, String msg){
-        Set<String> skipped = responses.stream()
-                .filter(r -> r.getErrorReason() == errorReason)
-                .map(r -> r.getBaseClass().getName())
-                .collect(Collectors.toSet());
-        if (Utils.isNotEmpty(skipped)){
-            MainLogger.info(project, 2, msg
-                    .replace("{count}", String.valueOf(skipped.size()))
-                    .replace("{classes}", String.valueOf(skipped))
-            );
-        }
     }
 
     private static void registerRulesFromDependencies(RulesManager rulesManager){
@@ -140,39 +114,84 @@ public class StartProjectComponent implements ProjectComponent {
             JavaPsiFacade javaPsiFacade = JavaPsiFacade.getInstance(project);
 
             // TODO вынести в настройки
-            List<String> additionalPackages = List.of(
-                    // cbscoreservices
-                    "ru.athena.cbs.base.metaloader.metaentity",
-                    "ru.athena.cbs.base.metaloader.metaentity.addtitionalattributes",
-                    "ru.athena.cbs.coreservices.metaloader.entitylabels.metaentity",
-                    "ru.athena.cbs.coreservices.metaloader.enumeration.metaentity",
-                    "ru.athena.cbs.coreservices.metaloader.externaldocid.metaentity",
-                    "ru.athena.cbs.coreservices.metaloader.metaentity",
-                    "ru.athena.cbs.coreservices.metaloader.registrykey.metaentity",
-                    "ru.athena.cbs.coreservices.metaloader.userkey.metaentity",
-                    // cbsdocengine
-                    "ru.athena.cbs.docengine.metaloader.metaentity",
-                    // cbsdocnumber
-                    "ru.athena.cbs.cbsdocnumber.metaloader.metaentity"
+            Map<String, List<String>> modulesToAdditionalPackages = Map.of(
+                    "cbscoreservices-metaloader", List.of(
+                            "ru.athena.cbs.base.metaloader.metaentity",
+                            "ru.athena.cbs.base.metaloader.metaentity.addtitionalattributes",
+                            "ru.athena.cbs.coreservices.metaloader.entitylabels.metaentity",
+                            "ru.athena.cbs.coreservices.metaloader.enumeration.metaentity",
+                            "ru.athena.cbs.coreservices.metaloader.externaldocid.metaentity",
+                            "ru.athena.cbs.coreservices.metaloader.metaentity",
+                            "ru.athena.cbs.coreservices.metaloader.registrykey.metaentity",
+                            "ru.athena.cbs.coreservices.metaloader.userkey.metaentity"
+                    ),
+                    "cbsdocengine-metaloader", List.of(
+                            "ru.athena.cbs.docengine.metaloader.metaentity"
+                    ),
+                    "cbsdocnumber-metaloader", List.of(
+                            "ru.athena.cbs.cbsdocnumber.metaloader.metaentity"
+                    )
             );
 
-            for (String additionalPackage : additionalPackages) {
-                PsiPackage psiPackage = javaPsiFacade.findPackage(additionalPackage);
-                if (psiPackage == null) {
-                    MainLogger.info(project, 1, "Package \"%s\" was not found.", additionalPackage);
-                    continue;
-                }
+            for (Map.Entry<String, List<String>> moduleToAdditionalPackage : modulesToAdditionalPackages.entrySet()) {
+                for (String pack : moduleToAdditionalPackage.getValue()) {
+                    PsiPackage psiPackage = javaPsiFacade.findPackage(pack);
+                    if (psiPackage == null){
+                        MainLogger.info(project, 1, "Package \"%s\" was not found.", pack);
+                        continue;
+                    }
 
-                MainLogger.info(project, 1, "Package \"%s\"...", psiPackage.getQualifiedName());
-                for (PsiClass aClass : psiPackage.getClasses()) {
-                    HandleClassesResponse response = rulesManager.handleClassAndSuperClasses(aClass);
-                    MainLogger.info(project, 2, response.getMessage());
-                }
+                    MainLogger.info(project, 1, "Package \"%s\"...", psiPackage.getQualifiedName());
+                    PsiClass[] classes = psiPackage.getClasses();
+                    if (classes.length == 0){
+                        MainLogger.info(project, 2, "No classes found.");
+                    }
 
+                    for (PsiClass aClass : classes) {
+                        if (aClass.getContainingFile() == null) continue;
+                        if (aClass.getContainingFile().getVirtualFile() == null) continue;
+                        // Проверка, что это класс именно из .jar нужного модуля
+                        // Раньше плагин находил эти классы во всех зависимостях проекта (н-р, auth, currency), и возникали расхождения правил
+                        if (!aClass.getContainingFile().getVirtualFile().getPath().contains("/" + moduleToAdditionalPackage.getKey() + "/")) continue;
+
+                        HandleClassesResponse response = rulesManager.handleClassAndSuperClasses(aClass, "StartProjectComponent: dependencies");
+                        if (response.isSuccess()){
+                            MainLogger.info(project, 2, response.getMessage());
+                        }
+                    }
+                }
             }
+
             MainLogger.info(project, "Rules from dependencies have been registered.");
+
         } catch (Exception e){
             MainLogger.warn(project, "An error occurred while registering rules from dependencies: %s, %s", e.getMessage(), Arrays.toString(e.getStackTrace()));
+        }
+    }
+
+    private static void logSkippedClasses(Project project, List<HandleClassesResponse> skippedResponses, int baseOffset){
+        if (!skippedResponses.isEmpty()){
+            MainLogger.info(project, baseOffset, "Skipped classes (%s):", skippedResponses.size());
+        }
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CLASS_IS_NOT_DATAMODEL, "- Not datamodel classes: {count}");
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CLASS_IS_MAPPED, "- Mapped classes: {count}");
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CLASS_IS_INNER, "- Inner classes: {count}");
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CLASS_IS_ENUM, "- Enum classes: {count}");
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CANNOT_GET_QUALIFIED_NAME, "- Could not get qualified name: {count}");
+        logSkippedClasses(project, skippedResponses, baseOffset + 1, CANNOT_GET_DATAMODEL_TAG, "- Could not get datamodel tag: {count}");
+    }
+
+    private static void logSkippedClasses(Project project, List<HandleClassesResponse> skippedResponses, int offset,
+                                          HandleClassesResponse.ErrorReason errorReason, String msg){
+        Set<String> skipped = skippedResponses.stream()
+                .filter(r -> r.getErrorReason() == errorReason)
+                .map(r -> r.getBaseClass().getName())
+                .collect(Collectors.toSet());
+        if (Utils.isNotEmpty(skipped)){
+            MainLogger.info(project, offset, msg
+                    .replace("{count}", String.valueOf(skipped.size()))
+                    .replace("{classes}", String.valueOf(skipped))
+            );
         }
     }
 

@@ -41,12 +41,12 @@ public class HandleClassesResponse {
     @Getter
     @RequiredArgsConstructor
     public enum ErrorReason{
-        CLASS_IS_NOT_DATAMODEL("Skipping class {class} (not a datamodel class)."),
-        CLASS_IS_MAPPED("Skipping class {class} (the class is mapped)."),
-        CLASS_IS_INNER("Skipping class {class} (the class is inner)."),
-        CLASS_IS_ENUM("Skipping class {class} (the class is enum)."),
-        CANNOT_GET_QUALIFIED_NAME("Skipping class {class} (could not get qualified name of class)."),
-        CANNOT_GET_DATAMODEL_TAG("Skipping class {class} (could not get datamodel tag of class).");
+        CLASS_IS_NOT_DATAMODEL("Not a datamodel class"),
+        CLASS_IS_MAPPED("The class is mapped"),
+        CLASS_IS_INNER("The class is inner"),
+        CLASS_IS_ENUM("The class is enum"),
+        CANNOT_GET_QUALIFIED_NAME("Could not get qualified name of class"),
+        CANNOT_GET_DATAMODEL_TAG("Could not get datamodel tag of class");
 
         private final String message;
     }

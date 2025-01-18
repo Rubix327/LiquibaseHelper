@@ -54,7 +54,7 @@ public class ClassDeletionListener implements PsiTreeChangeListener {
             // Проверяем, что класс существует и что это не внутренний класс (поскольку над внутренними классами не может быть этой аннотации),
             // и что аннотацию удалили не над полем
             if (conClass != null && conClass.getContainingClass() == null && conField == null){
-                rulesManagerInstance.removeRulesOfClass(conClass);
+                rulesManagerInstance.removeRulesOfClass(conClass, "@CbsDatamodelClass annotation has been removed", "ClassDeletionListener: onSomethingRemoved");
                 MainLogger.info(rulesManagerInstance.getProject(), "Удалена аннотация %s в классе %s.", removedAnnotation.getQualifiedName(), conClass.getName());
             }
         }
@@ -62,7 +62,7 @@ public class ClassDeletionListener implements PsiTreeChangeListener {
 
     private void onClassRemoved(RulesManager rulesManager, PsiClass removedClass){
         if (AnnotationUtils.isNotDatamodelClass(removedClass)) return;
-        rulesManager.removeRulesOfClass(removedClass);
+        rulesManager.removeRulesOfClass(removedClass, "Class has been removed", "ClassDeletionListener: onClassRemoved");
         rulesManager.removeClassReferencesFromEnums(removedClass);
     }
 

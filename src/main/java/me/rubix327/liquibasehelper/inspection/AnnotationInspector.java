@@ -65,7 +65,7 @@ public class AnnotationInspector extends LocalInspectionTool {
                         message = Localization.message("class.warn.interfaces", CbsDatamodelClass.SHORT_NAME);
                     }
 
-                    instance.removeRulesOfClass(psiClass);
+                    instance.removeRulesOfClass(psiClass, "Class is either inner, nested, enum or interface", "AnnotationInspector: checkClass");
                     Utils.registerError(holder, annotation,
                             new RemovePsiElementQuickFix(annotation, Localization.message("field.quickfix.delete-annotation", CbsDatamodelClass.SHORT_NAME)),
                             message);
@@ -74,7 +74,7 @@ public class AnnotationInspector extends LocalInspectionTool {
 
                 // Проверка на то, чтобы название класса совпадало с названием файла
                 if (Utils.isClassAndFileNamesNotMatch(psiClass)){
-                    instance.removeRulesOfClass(psiClass);
+                    instance.removeRulesOfClass(psiClass, "Class name does not match file name", "AnnotationInspector: checkClass");
 
                     LocalQuickFix fix = null;
                     if (psiClass.getContainingFile() != null) {
@@ -101,7 +101,7 @@ public class AnnotationInspector extends LocalInspectionTool {
                 }
 
                 String thisClassQualifiedName = psiClass.getQualifiedName();
-                String currentDatamodelName = RulesManager.getDatamodelNameOfClass(psiClass);
+                String currentDatamodelName = RulesManager.getDatamodelTagOfClass(psiClass);
 
                 if (thisClassQualifiedName == null) return;
                 if (currentDatamodelName == null) return;
@@ -114,11 +114,11 @@ public class AnnotationInspector extends LocalInspectionTool {
                 }
 
                 // Собираем правила для класса и его родителей
-                instance.handleClassAndSuperClasses(psiClass);
+                instance.handleClassAndSuperClasses(psiClass, "AnnotationInspector: checkClass: exact class");
 
                 // Обновляем правила наследников, в случае если были изменены правила в родителе
                 for (PsiClass inheritor : getInheritors(psiClass, ".metaloader.")) {
-                    instance.handleClassAndSuperClasses(inheritor);
+                    instance.handleClassAndSuperClasses(inheritor, "AnnotationInspector: checkClass: inheritor");
                 }
 
                 // Проверка на совпадающие теги у классов
@@ -144,9 +144,9 @@ public class AnnotationInspector extends LocalInspectionTool {
                     MainLogger.info(instance.getProject(), "Updating classes using enum %s: %s", psiClass.getName(), classesToUpdate.stream().map(NavigationItem::getName).toList());
                     for (PsiClass classToUpdate : classesToUpdate) {
                         if (classToUpdate == null || !classToUpdate.isValid()) continue;
-                        instance.handleClassAndSuperClasses(classToUpdate);
+                        instance.handleClassAndSuperClasses(classToUpdate, "AnnotationInspector: updateClassesUsingEnums: exact class");
                         for (PsiClass inheritor : getInheritors(classToUpdate, ".metaloader.")) {
-                            instance.handleClassAndSuperClasses(inheritor);
+                            instance.handleClassAndSuperClasses(inheritor, "AnnotationInspector: updateClassesUsingEnums: inheritor");
                         }
                     }
                 }

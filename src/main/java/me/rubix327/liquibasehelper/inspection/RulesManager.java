@@ -72,42 +72,42 @@ public class RulesManager {
         classToDatamodelValueRegistry.clear();
     }
 
-    private HandleClassesResponse makeErrorResponseAndRemoveRules(@NotNull PsiClass psiClass, @NotNull ErrorReason errorReason){
-        removeRulesOfClass(psiClass);
+    private HandleClassesResponse makeErrorResponseAndRemoveRules(@NotNull PsiClass psiClass, @NotNull String source, @NotNull ErrorReason errorReason){
+        removeRulesOfClass(psiClass, source, errorReason.getMessage());
         return makeErrorResponse(psiClass, errorReason);
     }
 
     /**
      * Обновить все правила для указанного класса и его родителей.
      */
-    public HandleClassesResponse handleClassAndSuperClasses(@NotNull PsiClass psiClass) {
+    public HandleClassesResponse handleClassAndSuperClasses(@NotNull PsiClass psiClass, @NotNull String source) {
         // Если класс == null или у него нет аннотации @CbsDatamodelClass
         if (AnnotationUtils.isNotDatamodelClass(psiClass)){
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_NOT_DATAMODEL);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_NOT_DATAMODEL);
         }
         // Если класс mapped, то пропускаем (такой класс только встраивает свои правила внутрь дочерних)
         // Регистрация правил из mapped классов происходит ниже, через метод #getRulesFromSuperClasses.
         // Если от mapped класса не наследуется ни один другой класс, то правила этого класса никогда не будут зарегистрированы.
         if (AnnotationUtils.isDatamodelMappedClass(psiClass)){
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_MAPPED);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_MAPPED);
         }
         // Если класс вложенный
         if (Utils.isClassAndFileNamesNotMatch(psiClass)) {
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_INNER);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_INNER);
         }
         // Если класс это enum
         if (psiClass.isEnum()){
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CLASS_IS_ENUM);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_ENUM);
         }
 
         String thisClassQualifiedName = psiClass.getQualifiedName();
-        String datamodelNameOfClass = getDatamodelNameOfClass(psiClass);
+        String datamodelNameOfClass = getDatamodelTagOfClass(psiClass);
 
         if (thisClassQualifiedName == null){
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CANNOT_GET_QUALIFIED_NAME);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CANNOT_GET_QUALIFIED_NAME);
         }
         if (datamodelNameOfClass == null){
-            return makeErrorResponseAndRemoveRules(psiClass, ErrorReason.CANNOT_GET_DATAMODEL_TAG);
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CANNOT_GET_DATAMODEL_TAG);
         }
 
         List<TagRule> rulesFromClass = getRulesFromFields(psiClass);
@@ -127,10 +127,10 @@ public class RulesManager {
         addRules(datamodelNameOfClass, container);
 
         return new HandleClassesResponse(psiClass).setSuccess(true)
-                .setMessage("- {class} (%s): %s (base: %s, super: %s)",
+                .setMessage("- {class} (%s): %s (base: %s, super: %s) (source: %s)",
                         datamodelNameOfClass,
                         rulesFromClassAndSuperClasses.size(), rulesFromClass.size(),
-                        rulesFromClassAndSuperClasses.size() - rulesFromClass.size());
+                        rulesFromClassAndSuperClasses.size() - rulesFromClass.size(), source);
     }
 
     private void addRules(@NotNull String datamodelName, @NotNull TagRulesContainer rules){
@@ -187,7 +187,7 @@ public class RulesManager {
      * @return Мета-название (такое название должно быть у родительского тега, чтобы правило сработало)
      */
     @Nullable
-    public static String getDatamodelNameOfClass(@NotNull PsiClass psiClass){
+    public static String getDatamodelTagOfClass(@NotNull PsiClass psiClass){
         // Из tag в аннотации @CbsDatamodelClass
         String fromField = AnnotationUtils.getCbsDatamodelClassAnnotationFieldStringValue(psiClass, CbsDatamodelClass.Fields.TAG);
         if (fromField != null){
@@ -427,10 +427,21 @@ public class RulesManager {
         return null;
     }
 
-    public void removeRulesOfClass(@NotNull PsiClass psiClass){
-        String datamodelName = getDatamodelNameOfClass(psiClass);
-        if (parentToTagRulesContainer.remove(datamodelName) != null){
-            MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s)", datamodelName, psiClass.getName());
+    public void removeRulesOfClass(@NotNull PsiClass psiClass, @NotNull String source, @NotNull String reason){
+        String datamodelTag = getDatamodelTagOfClass(psiClass);
+        if (datamodelTag == null) return;
+
+        Set<TagRulesContainer> containers = parentToTagRulesContainer.get(datamodelTag);
+        if (containers == null) return;
+
+        // Удаляем контейнер с правилами только если совпадают datamodelName и путь к классу
+        if (containers.removeIf(c -> c.getMetaClassPath().equals(psiClass.getQualifiedName()))){
+            MainLogger.info(psiClass.getProject(), "Removed rules for tag %s (class: %s). Reason: %s. Source: %s",
+                    datamodelTag, (psiClass.getQualifiedName() != null ? psiClass.getQualifiedName() : datamodelTag), reason, source);
+        }
+        // Удаляем тег, если внутри больше нет контейнеров правил
+        if (parentToTagRulesContainer.get(datamodelTag) == null || parentToTagRulesContainer.get(datamodelTag).isEmpty()){
+            parentToTagRulesContainer.remove(datamodelTag);
         }
     }
 
