@@ -247,6 +247,11 @@ public class RulesManager {
             tagRule.setRequired(AnnotationUtils.getBooleanValueOrDefault(required, false));
             tagRule.setMaxLength(AnnotationUtils.getIntegerValueOrDefault(maxLength, 0));
 
+            // Если тип поля - список из объектов другого класса, то сохраняем ссылку на этот класс,
+            // чтобы была возможность переключиться к нему из документации
+            PsiClass classFromList = Utils.getPsiClassFromListType(field);
+            tagRule.setListLinkToBaseClass(classFromList != null ? classFromList.getQualifiedName() : null);
+
             if (type instanceof PsiClassObjectAccessExpression typeValue){
                 PsiType mustType = typeValue.getOperand().getType();
                 PsiClass mustTypeClass = PsiUtil.resolveClassInType(mustType);

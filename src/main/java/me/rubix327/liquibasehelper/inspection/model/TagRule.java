@@ -30,6 +30,8 @@ public class TagRule {
     private String metaClassPath;
     private int metaFieldOffset = 0;
 
+    private String listLinkToBaseClass;
+
     public static TagRule getSuitableTagRule(@NotNull List<TagRule> rules, @NotNull XmlTag tag){
         for (TagRule rule : rules) {
             if (rule.tagName.equals(tag.getName())) return rule;

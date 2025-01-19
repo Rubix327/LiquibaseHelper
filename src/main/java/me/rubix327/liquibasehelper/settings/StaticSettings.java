@@ -14,6 +14,7 @@ public class StaticSettings {
     public static boolean ENABLE_DOCUMENTATION = true;
     public static boolean ENABLE_TAG_AUTO_COMPLETION = true;
     public static boolean ENABLE_SETTINGS_MENU = true;
+    public static boolean ENABLE_PROCESS_VARIABLES_CHECK = true;
 
     public static boolean SEARCH_ANNOTATION_BY_QUALIFIED_NAME = false;
     public static Locale LOCALE = Locale.RU;

@@ -1,12 +1,17 @@
 package me.rubix327.liquibasehelper.docs;
 
 import com.intellij.lang.documentation.DocumentationProvider;
+import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Key;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.xml.XmlAttribute;
+import com.intellij.psi.xml.XmlElement;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.psi.xml.XmlText;
+import me.rubix327.liquibasehelper.AnnotationUtils;
 import me.rubix327.liquibasehelper.Utils;
 import me.rubix327.liquibasehelper.inspection.RulesManager;
 import me.rubix327.liquibasehelper.inspection.XmlTagValuesInspector;
@@ -27,25 +32,42 @@ import java.util.List;
 
 public class TagDocumentationProvider implements DocumentationProvider {
 
+    private static final Key<String> CLASS_DOC_KEY = Key.create("classDoc");
+
     // Обработчик нажатий на ссылки внутри документации
     @Override
     public @Nullable PsiElement getDocumentationElementForLink(PsiManager psiManager, String link, PsiElement context) {
-        if (!link.startsWith("class:") && !link.startsWith("field:")) return null;
+        // Открытие класса или поля в редакторе
+        if (link.startsWith("class:") || link.startsWith("field:")){
+            String[] parts = link.split(":");
+            if (parts.length < 3) return null;
 
-        String[] parts = link.split(":");
-        if (parts.length < 3) return null;
+            String classPath = parts[1]; // class qualifiedName
+            String offsetStr = parts[2]; // offset from TagRule.metaFieldOffset or TagRulesContainer.metaClassNameOffset
 
-        String classPath = parts[1]; // class qualifiedName
-        String offsetStr = parts[2]; // offset from TagRule.metaFieldOffset or TagRulesContainer.metaClassNameOffset
+            int offset = 0;
+            try{
+                offset = Math.max(0, Integer.parseInt(offsetStr));
+            } catch (NumberFormatException ignored){}
 
-        int offset = 0;
-        try{
-            offset = Math.max(0, Integer.parseInt(offsetStr));
-        } catch (NumberFormatException ignored){}
+            PsiFile psiFile = Utils.findPsiFileByQualifiedName(context.getProject(), classPath);
+            if (psiFile != null){
+                Utils.openFile(context.getProject(), psiFile, offset);
+            }
+        }
+        // Открытие документации другого класса изнутри существующей документации
+        // Здесь в объект записывается путь к классу, для которого нужно открыть доки,
+        // а затем поток передается снова в метод generateDoc
+        else if (link.startsWith("classDoc:")){
+            if (context instanceof XmlElement element){
+                String[] parts = link.split(":");
+                if (parts.length < 2) return null;
+                String classPath = parts[1]; // class qualifiedName
 
-        PsiFile psiFile = Utils.findPsiFileByQualifiedName(context.getProject(), classPath);
-        if (psiFile != null){
-            Utils.openFile(context.getProject(), psiFile, offset);
+                XmlElement copyElement = (XmlElement) element.copy();
+                copyElement.putUserData(CLASS_DOC_KEY, classPath);
+                return copyElement;
+            }
         }
 
         return null;
@@ -60,18 +82,33 @@ public class TagDocumentationProvider implements DocumentationProvider {
             return null;
         }
 
-        XmlTag xmlTag = getXmlTag(element, originalElement);
-        XmlAttribute xmlAttribute = getXmlAttribute(element, originalElement);
-        XmlText xmlText = getXmlText(element, originalElement);
+        // Формирование документации другого класса из уже существующей документации
+        String linkedClassPath = element.getUserData(CLASS_DOC_KEY);
+        if (linkedClassPath != null){
+            PsiClass linkedClass = Utils.findPsiClassByQualifiedName(element.getProject(), linkedClassPath);
+            if (linkedClass != null && linkedClass.getName() != null){
+                String tag = RulesManager.getDatamodelTagOfClass(linkedClass);
+                assert tag != null;
+                TagRulesContainer container = RulesManager.getInstance(element.getProject()).getRulesContainerByTagName(tag);
+                return getParentTagTooltip(element.getProject(), tag, container);
+            }
+        }
 
+        // Наведение на тег
+        XmlTag xmlTag = getXmlTag(element, originalElement);
         if (xmlTag != null){
             return getTagTooltip(xmlTag);
         }
 
+        // Наведение на атрибут
+        XmlAttribute xmlAttribute = getXmlAttribute(element, originalElement);
         if (xmlAttribute != null){
             return getAttributeTooltip(xmlAttribute);
         }
 
+        // Наведение на значение тега
+        // (не сработает на значении атрибута!)
+        XmlText xmlText = getXmlText(element, originalElement);
         if (xmlText != null){
             return getTextTooltip(xmlText);
         }
@@ -104,7 +141,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
 
         TagRulesContainer tagRulesContainer = rulesManager.getRulesContainerByTagName(tag.getName());
         if (tagRulesContainer != null){
-            return getParentTagTooltip(tag, tagRulesContainer);
+            return getParentTagTooltip(tag.getProject(), tag.getName(), tagRulesContainer);
         }
 
         if (tag.getParentTag() == null) return null;
@@ -117,11 +154,11 @@ public class TagDocumentationProvider implements DocumentationProvider {
         return getChildTagTooltip(rule);
     }
 
-    private String getParentTagTooltip(@NotNull XmlTag tag, @NotNull TagRulesContainer tagRulesContainer){
+    private String getParentTagTooltip(@NotNull Project project, @NotNull String fallbackName, @NotNull TagRulesContainer tagRulesContainer){
         StringBuilder resultTooltip = new StringBuilder();
 
         String tooltip = tagRulesContainer.getParentTagTooltip();
-        resultTooltip.append("<b>").append(Utils.isNotBlank(tooltip) ? tooltip : tag.getName()).append("</b>");
+        resultTooltip.append("<b>").append(Utils.isNotBlank(tooltip) ? tooltip : fallbackName).append("</b>");
         resultTooltip.append(Utils.isNotBlank(tagRulesContainer.getParentTagDescription()) ? "<br>" + tagRulesContainer.getParentTagDescription() : "");
         List<TagRule> tagRules = tagRulesContainer.getTagRules();
         if (tagRules != null && !tagRules.isEmpty()){
@@ -129,7 +166,21 @@ public class TagDocumentationProvider implements DocumentationProvider {
             TagRule.sortByImportance(tagRules);
             for (TagRule tagRule : tagRules) {
                 boolean required = tagRule.isRequired();
-                resultTooltip.append("<br>• ").append(required ? "<b>" : "").append(tagRule.getTagName()).append(required ? "</b>" : "");
+                resultTooltip.append("<br>• ").append(required ? "<i>" : "");
+
+                // Формирование ссылки на класс поля со списочным типом, если он является @CbsDatamodelClass
+                // Например List<EnumerationValueMeta> - формируем ссылку на класс EnumerationValueMeta
+                PsiClass linkedClass = Utils.findPsiClassByQualifiedName(project, tagRule.getListLinkToBaseClass());
+                if (linkedClass != null && linkedClass.getQualifiedName() != null && !AnnotationUtils.isNotDatamodelClass(linkedClass)){
+                    String link = Utils.getHtmlLink("classDoc:" + linkedClass.getQualifiedName(), tagRule.getTagName());
+                    resultTooltip.append(link);
+                }
+                // Обычный случай (просто название тега из правила)
+                else {
+                    resultTooltip.append(tagRule.getTagName());
+                }
+
+                resultTooltip.append(required ? "</i>" : "");
                 if (Utils.isNotBlank(tagRule.getTagTooltip())){
                     resultTooltip
                             .append("<font color='#797D85'> - ")

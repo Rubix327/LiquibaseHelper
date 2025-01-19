@@ -202,6 +202,25 @@ public class Utils {
         return null;
     }
 
+    // Метод для получения класса типа у списка
+    // List<String> -> PsiClass('String')
+    public static PsiClass getPsiClassFromListType(@NotNull PsiField field){
+        PsiType psiType = field.getType();
+        if (psiType instanceof PsiClassType classType) {
+
+            // Проверяем, что это параметризованный тип
+            PsiType[] parameters = classType.getParameters();
+            if (parameters.length > 0) {
+                PsiType parameterType = parameters[0];
+                if (parameterType instanceof PsiClassType parameterClassType) {
+                    return parameterClassType.resolve();
+                }
+            }
+        }
+
+        return null;
+    }
+
     public static boolean isNotContainPaths(String path, List<String> mustNotContainPaths){
         for (String mustNotContainPath : mustNotContainPaths) {
             if (path.contains(mustNotContainPath)) return false;

@@ -23,6 +23,7 @@ public final class PersistentUserSettings implements PersistentStateComponent<Pe
     public boolean enableDocumentation = true;
     public boolean enableTagAutoCompletion = true;
     public boolean enableSettingsMenu = true;
+    public boolean enableProcessVariablesCheck = true;
     public Locale locale = Locale.RU;
 
     public static PersistentUserSettings getInstance() {
@@ -48,6 +49,7 @@ public final class PersistentUserSettings implements PersistentStateComponent<Pe
         StaticSettings.ENABLE_DOCUMENTATION = enableDocumentation;
         StaticSettings.ENABLE_TAG_AUTO_COMPLETION = enableTagAutoCompletion;
         StaticSettings.ENABLE_SETTINGS_MENU = enableSettingsMenu;
+        StaticSettings.ENABLE_PROCESS_VARIABLES_CHECK = enableProcessVariablesCheck;
         changeLanguage(locale);
     }
 
@@ -64,6 +66,7 @@ public final class PersistentUserSettings implements PersistentStateComponent<Pe
                 enableDocumentation != StaticSettings.ENABLE_DOCUMENTATION ||
                 enableTagAutoCompletion != StaticSettings.ENABLE_TAG_AUTO_COMPLETION ||
                 enableSettingsMenu != StaticSettings.ENABLE_SETTINGS_MENU ||
+                enableProcessVariablesCheck != StaticSettings.ENABLE_PROCESS_VARIABLES_CHECK ||
                 locale != StaticSettings.LOCALE;
     }
 
@@ -75,6 +78,7 @@ public final class PersistentUserSettings implements PersistentStateComponent<Pe
         enableDocumentation = StaticSettings.ENABLE_DOCUMENTATION;
         enableTagAutoCompletion = StaticSettings.ENABLE_TAG_AUTO_COMPLETION;
         enableSettingsMenu = StaticSettings.ENABLE_SETTINGS_MENU;
+        enableProcessVariablesCheck = StaticSettings.ENABLE_PROCESS_VARIABLES_CHECK;
         locale = StaticSettings.LOCALE;
     }
 
@@ -87,6 +91,7 @@ public final class PersistentUserSettings implements PersistentStateComponent<Pe
                 "\nenableDocumentation=" + enableDocumentation +
                 "\nenableTagAutoCompletion=" + enableTagAutoCompletion +
                 "\nenableSettingsMenu=" + enableSettingsMenu +
+                "\nenableProcessVariablesCheck=" + enableProcessVariablesCheck +
                 "\nlocale=" + locale.getName();
     }
 }
