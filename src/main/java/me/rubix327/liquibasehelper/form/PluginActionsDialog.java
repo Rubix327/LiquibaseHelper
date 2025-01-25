@@ -44,6 +44,7 @@ public class PluginActionsDialog extends DialogWrapper {
 
         JButton openSettingsButton = new JButton(Localization.message("actions.open-settings"));
         openSettingsButton.addActionListener((event) -> {
+            close(0);
             MainLogger.info(project, "Clicked 'Open plugin settings' button in Actions menu...");
             ShowSettingsUtil.getInstance().showSettingsDialog(project, StaticSettings.PLUGIN_NAME);
         });

@@ -63,6 +63,14 @@ public class RulesManager {
         return project;
     }
 
+    public static void removeInstance(Project project){
+        RulesManager instance = getInstance(project);
+        if (instance != null){
+            instance.resetAll();
+            instances.remove(project.getBasePath());
+        }
+    }
+
     /**
      * Сбросить все правила для этого проекта.
      */

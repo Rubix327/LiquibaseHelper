@@ -87,29 +87,42 @@ public class StartProjectComponent implements ProjectComponent {
     }
 
     private static void registerRulesForAllClasses(Project project){
-        RulesManager rulesManagerInstance = RulesManager.getInstance(project);
-        rulesManagerInstance.resetAll();
-        Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
-
-        MainLogger.info(project, "Registering project-level rules...");
-        MainLogger.info(project, 1, "Registered rules for classes:");
-        for (PsiClass psiClass : allClasses) {
-            HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass, "StartProjectComponent: project");
-            if (response.isSuccess()){
-                MainLogger.info(project, 2, response.getMessage());
-            }
+        if (project.isDisposed()){
+            MainLogger.warn("Called project is already disposed: %s", project.getName());
+            return;
         }
 
-        projectsRegisteredToUpdateRules.remove(project.getBasePath());
-        MainLogger.info(project, "Project-level rules have been registered.");
+        try {
+            RulesManager rulesManagerInstance = RulesManager.getInstance(project);
+            rulesManagerInstance.resetAll();
+            Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
 
-        registerRulesFromDependencies(rulesManagerInstance);
-        rulesManagerInstance.printAllRules();
+            MainLogger.info(project, "Registering project-level rules...");
+            MainLogger.info(project, 1, "Registered rules for classes:");
+            for (PsiClass psiClass : allClasses) {
+                HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass, "StartProjectComponent: project");
+                if (response.isSuccess()){
+                    MainLogger.info(project, 2, response.getMessage());
+                }
+            }
+
+            MainLogger.info(project, "Project-level rules have been registered.");
+
+            registerRulesFromDependencies(rulesManagerInstance);
+            rulesManagerInstance.printAllRules();
+        } finally {
+            projectsRegisteredToUpdateRules.remove(project.getBasePath());
+        }
     }
 
     private static void registerRulesFromDependencies(RulesManager rulesManager){
         Project project = rulesManager.getProject();
-        try{
+        if (project.isDisposed()){
+            MainLogger.warn("Called project is already disposed: %s", project.getName());
+            return;
+        }
+
+        try {
             MainLogger.info(project, "Registering rules from dependencies...");
             JavaPsiFacade javaPsiFacade = JavaPsiFacade.getInstance(project);
 
@@ -203,7 +216,8 @@ public class StartProjectComponent implements ProjectComponent {
     @Override
     public void projectClosed() {
         projectPathToArtifactId.remove(project.getBasePath());
-        RulesManager.getInstance(project).resetAll();
+        projectsRegisteredToUpdateRules.remove(project.getBasePath());
+        RulesManager.removeInstance(project);
     }
 
     private String getArtifactId(@NotNull VirtualFile file){
