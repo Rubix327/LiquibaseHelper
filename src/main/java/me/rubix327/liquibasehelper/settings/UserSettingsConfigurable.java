@@ -35,7 +35,7 @@ public class UserSettingsConfigurable implements Configurable {
     @Nls(capitalization = Nls.Capitalization.Title)
     @Override
     public String getDisplayName() {
-        return StaticSettings.PLUGIN_NAME;
+        return StaticSettings.getPluginName();
     }
 
     @Nullable
