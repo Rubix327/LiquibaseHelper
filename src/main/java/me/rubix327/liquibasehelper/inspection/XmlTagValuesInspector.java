@@ -91,7 +91,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
 
         if (attributeText == null) return;
         if (rule.getMaxLength() > 0 && attributeText.length() > rule.getMaxLength()){
-            Utils.registerError(holder, attribute, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_ATTR.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
+            Utils.registerError(holder, attribute, DeclinationHelper.CHARACTER_NOMINATIVE_ATTR.message(rule.getMaxLength()));
         }
     }
 
@@ -124,7 +124,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
 
         // Проверка на максимальную длину
         if (rule.getMaxLength() > 0 && tagText.length() > rule.getMaxLength()){
-            Utils.registerErrorOnValueOrTag(holder, tag, Localization.message(DeclinationHelper.CHARACTER_NOMINATIVE_TAG.getLocaleKey(rule.getMaxLength()), rule.getMaxLength()));
+            Utils.registerErrorOnValueOrTag(holder, tag, DeclinationHelper.CHARACTER_NOMINATIVE_TAG.message(rule.getMaxLength()));
         }
 
         // Проверка на обязательность

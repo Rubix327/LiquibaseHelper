@@ -1,4 +1,4 @@
-package me.rubix327.liquibasehelper.form;
+package me.rubix327.liquibasehelper.form.actions;
 
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;

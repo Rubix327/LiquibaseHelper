@@ -8,7 +8,8 @@ import lombok.RequiredArgsConstructor;
 public enum DeclinationHelper {
 
     CHARACTER_NOMINATIVE_TAG("tag.warn.max-length.one", "tag.warn.max-length.two", "tag.warn.max-length.five"),
-    CHARACTER_NOMINATIVE_ATTR("attribute.warn.max-length.one", "attribute.warn.max-length.two", "attribute.warn.max-length.five");
+    CHARACTER_NOMINATIVE_ATTR("attribute.warn.max-length.one", "attribute.warn.max-length.two", "attribute.warn.max-length.five"),
+    ELEMENT_NOMINATIVE("metadata-generator.element.one", "metadata-generator.element.two", "metadata-generator.element.five");
 
     private final String one;
     private final String two;
@@ -23,6 +24,10 @@ public enum DeclinationHelper {
         if (div == 0 || div >= 5) return five;
         if (div == 1) return one;
         return two;
+    }
+
+    public String message(long amount, String... args){
+        return Localization.message(getLocaleKey(amount), amount, args);
     }
 
 }

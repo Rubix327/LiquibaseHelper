@@ -1,9 +1,10 @@
-package me.rubix327.liquibasehelper.form;
+package me.rubix327.liquibasehelper.form.actions;
 
 import com.intellij.openapi.options.ShowSettingsUtil;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import me.rubix327.liquibasehelper.StartProjectComponent;
+import me.rubix327.liquibasehelper.form.metadatagenerator.MetadataGeneratorChooseDialog;
 import me.rubix327.liquibasehelper.locale.Localization;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.StaticSettings;
@@ -20,7 +21,7 @@ public class PluginActionsDialog extends DialogWrapper {
         super(project, true);
         this.project = project;
 
-        setTitle(StaticSettings.PLUGIN_NAME + " Actions");
+        setTitle(Localization.message("actions.title", StaticSettings.getPluginName()));
         setResizable(false);
         init();
     }
@@ -42,16 +43,24 @@ public class PluginActionsDialog extends DialogWrapper {
         JButton viewProblemsButton = new JButton(Localization.message("actions.find-problems"));
         viewProblemsButton.setEnabled(false); // TODO
 
+        JButton metadataGeneratorButton = new JButton(Localization.message("actions.metadata-generator"));
+        metadataGeneratorButton.addActionListener((event) -> {
+            close(0);
+            MainLogger.info(project, "Clicked 'Metadata generator...' button in Actions menu...");
+            new MetadataGeneratorChooseDialog(project).show();
+        });
+
         JButton openSettingsButton = new JButton(Localization.message("actions.open-settings"));
         openSettingsButton.addActionListener((event) -> {
             close(0);
             MainLogger.info(project, "Clicked 'Open plugin settings' button in Actions menu...");
-            ShowSettingsUtil.getInstance().showSettingsDialog(project, StaticSettings.PLUGIN_NAME);
+            ShowSettingsUtil.getInstance().showSettingsDialog(project, StaticSettings.getPluginName());
         });
 
         panel.add(reloadRulesButton);
         panel.add(changesetTreeButton);
         panel.add(viewProblemsButton);
+        panel.add(metadataGeneratorButton);
         panel.add(openSettingsButton);
 
         JPanel outerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));

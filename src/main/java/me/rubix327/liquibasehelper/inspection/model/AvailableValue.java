@@ -2,6 +2,7 @@ package me.rubix327.liquibasehelper.inspection.model;
 
 import lombok.Getter;
 import me.rubix327.liquibasehelper.Utils;
+import me.rubix327.liquibasehelper.locale.Localization;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,6 +24,10 @@ public class AvailableValue {
     public AvailableValue(String value, String comment) {
         this.value = value;
         this.comment = comment;
+    }
+
+    public String getValueAndComment(){
+        return value + " - " + comment;
     }
 
     @NotNull
@@ -58,6 +63,13 @@ public class AvailableValue {
 
         // Хорошая строка, разделенная двоеточием. Пример: "0:yes"
         return new AvailableValue(valueAndComment[0], valueAndComment[1]);
+    }
+
+    public static List<AvailableValue> makeYesNoAvailableValues(){
+        List<AvailableValue> values = new ArrayList<>();
+        values.add(new AvailableValue("0", Localization.message("docs.no")));
+        values.add(new AvailableValue("1", Localization.message("docs.yes")));
+        return values;
     }
 
     @Override

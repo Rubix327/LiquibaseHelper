@@ -20,9 +20,17 @@ import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import com.intellij.util.lang.UrlClassLoader;
+import me.rubix327.liquibasehelper.inspection.model.TagRule;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.TitledBorder;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -383,6 +391,30 @@ public class Utils {
             JavaCodeStyleManager styleManager = JavaCodeStyleManager.getInstance(project);
             styleManager.optimizeImports(file);
         }
+    }
+
+    public static void copyToClipboard(String text) {
+        StringSelection selection = new StringSelection(text);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(selection, null);
+    }
+
+    public static String getTagLabel(TagRule tagRule){
+        return StringUtils.isNotBlank(tagRule.getTagTooltip()) ? tagRule.getTagTooltip() : tagRule.getTagName();
+    }
+
+    public static String getTagTooltipHtml(TagRule tagRule){
+        return "<html>" + tagRule.getTagName() + "<br>" +
+                (StringUtils.isNotBlank(tagRule.getTagTooltip()) ? tagRule.getTagTooltip() + "<br>" : "") +
+                (StringUtils.isNotBlank(tagRule.getTagDescription()) ? tagRule.getTagDescription() + "<br>" : "") + "</html>";
+    }
+
+    public static TitledBorder createTitledBorder(String title){
+        Border border = BorderFactory.createEtchedBorder();
+        TitledBorder titledBorder = BorderFactory.createTitledBorder(border, title);
+        titledBorder.setTitleJustification(TitledBorder.LEFT);
+        titledBorder.setTitlePosition(TitledBorder.TOP);
+        return titledBorder;
     }
 
 }

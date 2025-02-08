@@ -50,8 +50,8 @@
     </extensions>
 
     <actions>
-        <action id="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
-                class="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
+        <action id="me.rubix327.liquibasehelper.form.actions.OpenActionsMenuAction"
+                class="me.rubix327.liquibasehelper.form.actions.OpenActionsMenuAction"
                 icon="AllIcons.Providers.Liquibase"
                 text="LiquibaseHelper"
                 description="Show LiquibaseHelper actions">
