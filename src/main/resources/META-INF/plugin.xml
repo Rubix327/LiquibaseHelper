@@ -53,7 +53,7 @@
         <action id="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
                 class="me.rubix327.liquibasehelper.form.OpenActionsMenuAction"
                 icon="AllIcons.Providers.Liquibase"
-                text="LiquibaseHelper"
+                text="LiquibaseHelper..."
                 description="Show LiquibaseHelper actions">
             <add-to-group group-id="ToolsMenu" anchor="last"/>
         </action>

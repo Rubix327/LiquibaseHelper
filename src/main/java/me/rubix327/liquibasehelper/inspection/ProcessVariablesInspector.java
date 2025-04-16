@@ -349,7 +349,7 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
 
             // Проверяем, что вызов add относится к текущей переменной
             if (qualifier != null && qualifier.getText().equals(localVariable.getName()) &&
-                    "add".equals(methodExpression.getReferenceName())) {
+                    List.of("add", "addAll").contains(methodExpression.getReferenceName())) {
                 PsiExpression[] arguments = methodCall.getArgumentList().getExpressions();
                 if (arguments.length > 0) {
                     // Если в список добавляется новый экземпляр (new ProcessVariableDefinition)
@@ -359,6 +359,10 @@ public class ProcessVariablesInspector extends LocalInspectionTool {
                     // Если в список добавляется готовая переменная
                     if (arguments[0] instanceof PsiReferenceExpression refExpression){
                         keys.merge(extractFromReference(containingClass, refExpression));
+                    }
+                    // Если в список добавляется вызов метода (например addAll(List.of))
+                    if (arguments[0] instanceof PsiMethodCallExpression methodCallExpression){
+                        keys.merge(extractFromMethodCall(containingClass, methodCallExpression, localVariable));
                     }
                 }
             }
