@@ -38,6 +38,10 @@ public class PluginActionsDialog extends DialogWrapper {
 
         JButton changesetTreeButton = new JButton(Localization.message("actions.changeset-tree"));
         changesetTreeButton.setEnabled(false); // TODO
+//        changesetTreeButton.addActionListener((event) -> {
+//            close(0);
+//            new ChangeSetTreeHandler();
+//        });
 
         JButton viewProblemsButton = new JButton(Localization.message("actions.find-problems"));
         viewProblemsButton.setEnabled(false); // TODO
