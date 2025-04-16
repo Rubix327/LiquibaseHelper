@@ -4,6 +4,7 @@ import com.intellij.psi.PsiClass;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -34,14 +35,14 @@ public class HandleClassesResponse {
         return this;
     }
 
-    public static HandleClassesResponse makeErrorResponse(@NotNull PsiClass psiClass, @NotNull ErrorReason errorReason){
-        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(errorReason.getMessage()).setErrorReason(errorReason);
+    public static HandleClassesResponse makeErrorResponse(@NotNull PsiClass psiClass, @NotNull ErrorReason errorReason, Object... args){
+        return new HandleClassesResponse(psiClass).setSuccess(false).setMessage(errorReason.getMessage(args)).setErrorReason(errorReason);
     }
 
     @Getter
     @RequiredArgsConstructor
     public enum ErrorReason{
-        CLASS_IS_NOT_DATAMODEL("Not a datamodel class"),
+        CLASS_IS_NOT_DATAMODEL("Not a datamodel class (%s)"),
         CLASS_IS_MAPPED("The class is mapped"),
         CLASS_IS_INNER("The class is inner"),
         CLASS_IS_ENUM("The class is enum"),
@@ -49,6 +50,17 @@ public class HandleClassesResponse {
         CANNOT_GET_DATAMODEL_TAG("Could not get datamodel tag of class");
 
         private final String message;
+
+        public String getMessage(Object... args){
+            int occurrences = StringUtils.countMatches(message, "%s");
+            String msg;
+            if (args == null || args.length == 0 || args.length != occurrences){
+                msg = message.replace("(%s)", "(~)").replace("%s", "~");
+            } else {
+                msg = String.format(message, args);
+            }
+            return msg;
+        }
     }
 
 }

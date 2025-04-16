@@ -2,6 +2,7 @@ package me.rubix327.liquibasehelper;
 
 import com.intellij.lang.jvm.annotation.JvmAnnotationAttribute;
 import com.intellij.psi.*;
+import me.rubix327.liquibasehelper.inspection.model.DatamodelClassCheckResponse;
 import me.rubix327.liquibasehelper.settings.CbsAnnotation;
 import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
@@ -32,6 +33,28 @@ public class AnnotationUtils {
             }
         }
         return null;
+    }
+
+    /**
+     * Извлечь значение ключа из выражения.
+     */
+    @Nullable
+    public static String resolveStringValue(@NotNull PsiExpression expression) {
+        if (expression instanceof PsiLiteralExpression literalExpression) {
+            // Если это строковый литерал
+            Object value = literalExpression.getValue();
+            return value instanceof String ? (String) value : null;
+        } else if (expression instanceof PsiReferenceExpression referenceExpression) {
+            // Если это ссылка на переменную
+            var resolvedElement = referenceExpression.resolve();
+            if (resolvedElement instanceof PsiVariable variable) {
+                var initializer = variable.getInitializer();
+                if (initializer != null) {
+                    return resolveStringValue(initializer); // Рекурсивно извлекаем значение
+                }
+            }
+        }
+        return null; // Не удалось определить значение
     }
 
     public static int getIntegerValueOrDefault(PsiAnnotationMemberValue param, int defaultValue){
@@ -69,6 +92,10 @@ public class AnnotationUtils {
         return null;
     }
 
+    public static boolean isNotDatamodelClass(@Nullable PsiClass psiClass){
+        return !checkIsDatamodelClass(psiClass).isDatamodelClass();
+    }
+
     /**
      * Проверить, что класс не является CbsDatamodelClass.<br>
      * Если этот метод возвращает true, то это гарантирует, что как минимум одно из следующих условий верно:<ul>
@@ -80,17 +107,19 @@ public class AnnotationUtils {
      * <li>Над указанным psiClass нет аннотации @CbsDatamodelClass</li>
      * </ul>
      */
-    public static boolean isNotDatamodelClass(@Nullable PsiClass psiClass){
-        if (psiClass == null) return true;
-        if (Object.class.getName().equals(psiClass.getQualifiedName())) return true;
-        if (psiClass.getQualifiedName() == null || !psiClass.getQualifiedName().contains(".metaloader.")) return true;
-        if (psiClass.getContainingClass() != null) return true;
-        if (psiClass.isEnum()) return true;
-        return findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE) == null;
+    public static DatamodelClassCheckResponse checkIsDatamodelClass(@Nullable PsiClass psiClass){
+        if (psiClass == null) return new DatamodelClassCheckResponse(psiClass, false, "PsiClass is null");
+        if (Object.class.getName().equals(psiClass.getQualifiedName())) return new DatamodelClassCheckResponse(psiClass, false, "PsiClass is Object");
+        if (psiClass.getQualifiedName() == null || !psiClass.getQualifiedName().contains(".metaloader.")) return new DatamodelClassCheckResponse(psiClass, false, "Qualified name is null or does not contain .metaloader. inside");
+        if (psiClass.getContainingClass() != null) return new DatamodelClassCheckResponse(psiClass, false, "The class is inner");
+        if (psiClass.isEnum()) return new DatamodelClassCheckResponse(psiClass, false, "The class is enum");
+        if (findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE) == null) return new DatamodelClassCheckResponse(psiClass, false, "The class does not have @CbsDatamodelClass annotation");
+        return new DatamodelClassCheckResponse(psiClass, true);
     }
 
     public static boolean isDatamodelMappedClass(@Nullable PsiClass psiClass){
         if (isNotDatamodelClass(psiClass)) return false;
+        assert psiClass != null;
 
         PsiAnnotation annotation = findAnnotation(psiClass, CbsAnnotation.CbsDatamodelClass.INSTANCE);
         if (annotation == null) return false;

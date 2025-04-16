@@ -5,10 +5,7 @@ import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtil;
 import me.rubix327.liquibasehelper.AnnotationUtils;
 import me.rubix327.liquibasehelper.Utils;
-import me.rubix327.liquibasehelper.inspection.model.AvailableValue;
-import me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse;
-import me.rubix327.liquibasehelper.inspection.model.TagRule;
-import me.rubix327.liquibasehelper.inspection.model.TagRulesContainer;
+import me.rubix327.liquibasehelper.inspection.model.*;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -80,9 +77,9 @@ public class RulesManager {
         classToDatamodelValueRegistry.clear();
     }
 
-    private HandleClassesResponse makeErrorResponseAndRemoveRules(@NotNull PsiClass psiClass, @NotNull String source, @NotNull ErrorReason errorReason){
+    private HandleClassesResponse makeErrorResponseAndRemoveRules(@NotNull PsiClass psiClass, @NotNull String source, @NotNull ErrorReason errorReason, Object... args){
         removeRulesOfClass(psiClass, source, errorReason.getMessage());
-        return makeErrorResponse(psiClass, errorReason);
+        return makeErrorResponse(psiClass, errorReason, args);
     }
 
     /**
@@ -90,8 +87,9 @@ public class RulesManager {
      */
     public HandleClassesResponse handleClassAndSuperClasses(@NotNull PsiClass psiClass, @NotNull String source) {
         // Если класс == null или у него нет аннотации @CbsDatamodelClass
-        if (AnnotationUtils.isNotDatamodelClass(psiClass)){
-            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_NOT_DATAMODEL);
+        DatamodelClassCheckResponse checkResponse = AnnotationUtils.checkIsDatamodelClass(psiClass);
+        if (!checkResponse.isDatamodelClass()){
+            return makeErrorResponseAndRemoveRules(psiClass, source, ErrorReason.CLASS_IS_NOT_DATAMODEL, checkResponse.getMessage());
         }
         // Если класс mapped, то пропускаем (такой класс только встраивает свои правила внутрь дочерних)
         // Регистрация правил из mapped классов происходит ниже, через метод #getRulesFromSuperClasses.
@@ -223,6 +221,7 @@ public class RulesManager {
         if (AnnotationUtils.isNotDatamodelClass(psiClass)) {
             return null;
         }
+        assert psiClass != null;
 
         // Название класса не совпадает с названием файла, в котором он находится (это вложенный класс)
         if (Utils.isClassAndFileNamesNotMatch(psiClass)) {
@@ -280,14 +279,30 @@ public class RulesManager {
                 tagRule.setAvailableValues(AvailableValue.stringToAvailableValues(availableValuesString));
             }
 
+            // Возможные значения из availableValues в виде одиночной константы
+            if (availableValues instanceof PsiReferenceExpression availableValueRefExpression){
+                String gotString = AnnotationUtils.resolveStringValue(availableValueRefExpression);
+                if (gotString != null){
+                    tagRule.setAvailableValues(AvailableValue.stringToAvailableValues(gotString));
+                }
+            }
+
             // Возможные значения из availableValues в виде массива
             if (availableValues instanceof PsiArrayInitializerMemberValue availableValuesArray){
                 List<AvailableValue> availableValuesList = new ArrayList<>();
 
                 for (PsiAnnotationMemberValue initializer : availableValuesArray.getInitializers()) {
+                    // Элемент массива - строка
                     if (initializer instanceof PsiLiteralExpression initializerString){
                         if (initializerString.getValue() instanceof String s){
                             availableValuesList.addAll(AvailableValue.stringToAvailableValues(s));
+                        }
+                    }
+                    // Элемент массива - константа
+                    else if (initializer instanceof PsiReferenceExpression referenceExpression){
+                        String gotString = AnnotationUtils.resolveStringValue(referenceExpression);
+                        if (gotString != null){
+                            availableValuesList.addAll(AvailableValue.stringToAvailableValues(gotString));
                         }
                     }
                 }

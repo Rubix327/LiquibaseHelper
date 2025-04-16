@@ -31,6 +31,8 @@ public class StartProjectComponent implements ProjectComponent {
     private static final Map<String, String> projectPathToArtifactId = new HashMap<>();
     private final Project project;
 
+    private static final int SKIPPED_CLASSES_LOG_LEVEL = 0; // debug variable
+
     public StartProjectComponent(Project project) {
         this.project = project;
     }
@@ -98,15 +100,28 @@ public class StartProjectComponent implements ProjectComponent {
             Query<PsiClass> allClasses = AllClassesSearch.search(GlobalSearchScope.projectScope(project), project);
 
             MainLogger.info(project, "Registering project-level rules...");
-            MainLogger.info(project, 1, "Registered rules for classes:");
+            boolean atLeastOneRegistered = false;
+            List<HandleClassesResponse> skippedResponses = new ArrayList<>();
             for (PsiClass psiClass : allClasses) {
                 HandleClassesResponse response = rulesManagerInstance.handleClassAndSuperClasses(psiClass, "StartProjectComponent: project");
                 if (response.isSuccess()){
-                    MainLogger.info(project, 2, response.getMessage());
+                    MainLogger.info(project, 1, response.getMessage());
+                    atLeastOneRegistered = true;
+                } else if (SKIPPED_CLASSES_LOG_LEVEL == 2) {
+                    MainLogger.info(project, 1, "Skipped class %s: %s", psiClass.getQualifiedName(), response.getMessage());
+                    skippedResponses.add(response);
                 }
             }
 
-            MainLogger.info(project, "Project-level rules have been registered.");
+            if (SKIPPED_CLASSES_LOG_LEVEL == 1){
+                logSkippedClasses(project, skippedResponses, 1);
+            }
+
+            if (atLeastOneRegistered){
+                MainLogger.info(project, "Project-level rules have been registered.");
+            } else {
+                MainLogger.info(project, "No project-level rules have been registered.");
+            }
 
             registerRulesFromDependencies(rulesManagerInstance);
             rulesManagerInstance.printAllRules();
