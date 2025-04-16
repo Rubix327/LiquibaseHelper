@@ -1,5 +1,13 @@
 # LiquibaseHelper
 ___
+### Установка
+1. Скачайте последнюю версию плагина из раздела [Releases](https://github.com/Rubix327/LiquibaseHelper/releases)
+2. Перейдите в IntelliJ IDEA, откройте Settings (Ctrl+Alt+S)
+3. Откройте раздел Plugins
+4. Нажмите на шестеренку справа от "Installed" -> Install Plugin from Disk... -> Выберите файл
+5. Перезапустите все окна IntelliJ IDEA
+
+___
 ### Функционал
 
 - Прямая навигация (от кумулятива к ченджсетам) — Ctrl+ЛКМ по пути к файлу
