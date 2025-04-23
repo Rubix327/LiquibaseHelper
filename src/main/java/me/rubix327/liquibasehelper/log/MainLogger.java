@@ -4,7 +4,8 @@ import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
-import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
 @SuppressWarnings("unused")
@@ -13,10 +14,19 @@ public class MainLogger {
 
     static {
         try {
-            FileHandler fileHandler = new FileHandler(LogUtils.getLogFile().getAbsolutePath(), true);
-            fileHandler.setFormatter(new LogFormatter());
-            LOGGER.addHandler(fileHandler);
-            LOGGER.setUseParentHandlers(false); // Чтобы избежать дублирования логов в консоли IDE
+            RotatingDateTimeFileHandler handler = new RotatingDateTimeFileHandler();
+            handler.setFormatter(new Formatter() {
+                @Override
+                public String format(LogRecord record) {
+                    return String.format(
+                            "%1$tF %1$tT [%2$s] %3$s %n",
+                            record.getMillis(),
+                            record.getLevel().getName(),
+                            record.getMessage());
+                }
+            });
+            LOGGER.addHandler(handler);
+            LOGGER.setUseParentHandlers(false);
         } catch (IOException e) {
             e.printStackTrace();
         }

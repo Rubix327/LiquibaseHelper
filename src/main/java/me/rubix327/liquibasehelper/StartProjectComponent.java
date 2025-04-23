@@ -1,6 +1,10 @@
 package me.rubix327.liquibasehelper;
 
+import com.intellij.ide.plugins.PluginManagerCore;
+import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.ProjectComponent;
+import com.intellij.openapi.extensions.PluginId;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -19,13 +23,14 @@ import me.rubix327.liquibasehelper.listener.ClassDeletionListener;
 import me.rubix327.liquibasehelper.log.MainLogger;
 import me.rubix327.liquibasehelper.settings.PersistentUserSettings;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.idea.maven.project.MavenProjectsManager;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static me.rubix327.liquibasehelper.inspection.model.HandleClassesResponse.ErrorReason.*;
 
-public class StartProjectComponent implements ProjectComponent {
+public class StartProjectComponent implements ProjectComponent, Disposable {
 
     private static final List<String> projectsRegisteredToUpdateRules = new ArrayList<>();
     private static final Map<String, String> projectPathToArtifactId = new HashMap<>();
@@ -37,6 +42,11 @@ public class StartProjectComponent implements ProjectComponent {
         this.project = project;
     }
 
+    /**
+     * Получить название артефакта указанного проекта (берется из атрибута artifactId в pom.xml).
+     * @param project Проект
+     * @return Название артефакта (проекта)
+     */
     public static String getArtifactId(Project project){
         return projectPathToArtifactId.get(project.getBasePath());
     }
@@ -62,8 +72,16 @@ public class StartProjectComponent implements ProjectComponent {
         }
 
         registerRulesForAllClassesAfterIndexingInBackground(project);
+        registerMavenReloadListener();
     }
 
+    /**
+     * Зарегистрировать все правила указанного проекта.<br>
+     * Если регистрация уже запланирована и еще не закончена, то новая запланирована не будет.<br>
+     * Непосредственно регистрация правил запускается только тогда, когда проект входит в режим "умной" работы
+     * (или сразу, если проект уже находится в этом режиме).
+     * @param project Проект
+     */
     public static void registerRulesForAllClassesAfterIndexingInBackground(@NotNull Project project){
         // Предотвращение запуска регистрации правил несколько раз, пока не завершится хотя бы одна регистрация.
         // Например, при смене git-веток во время индексации, могут удаляться сразу несколько файлов (N),
@@ -88,6 +106,7 @@ public class StartProjectComponent implements ProjectComponent {
         Utils.runReadActionInBackground(project, "LiquibaseHelper: Loading rules", () -> registerRulesForAllClasses(project));
     }
 
+    // Зарегистрировать все правила проекта
     private static void registerRulesForAllClasses(Project project){
         if (project.isDisposed()){
             MainLogger.warn("Called project is already disposed: %s", project.getName());
@@ -130,6 +149,7 @@ public class StartProjectComponent implements ProjectComponent {
         }
     }
 
+    // Зарегистрировать правила из зависимостей Maven
     private static void registerRulesFromDependencies(RulesManager rulesManager){
         Project project = rulesManager.getProject();
         if (project.isDisposed()){
@@ -197,6 +217,25 @@ public class StartProjectComponent implements ProjectComponent {
         }
     }
 
+    // Зарегистрировать слушатель перезагрузки Maven
+    private void registerMavenReloadListener(){
+        ApplicationManager.getApplication().invokeLater(() -> {
+            if (PluginManagerCore.isPluginInstalled(PluginId.getId("org.jetbrains.idea.maven"))){
+                MavenProjectsManager mavenManager = MavenProjectsManager.getInstance(project);
+                if (mavenManager != null && mavenManager.isMavenizedProject()) {
+                    MainLogger.info(project, "Registering MavenReloadListener...");
+                    mavenManager.addManagerListener(new MavenProjectsManager.Listener() {
+                        @Override
+                        public void projectImportCompleted() {
+                            MainLogger.info(project, "Maven reloaded: updating project-level rules...");
+                            StartProjectComponent.registerRulesForAllClassesAfterIndexingInBackground(project);
+                        }
+                    }, this);
+                }
+            }
+        });
+    }
+
     private static void logSkippedClasses(Project project, List<HandleClassesResponse> skippedResponses, int baseOffset){
         if (!skippedResponses.isEmpty()){
             MainLogger.info(project, baseOffset, "Skipped classes (%s):", skippedResponses.size());
@@ -230,9 +269,7 @@ public class StartProjectComponent implements ProjectComponent {
 
     @Override
     public void projectClosed() {
-        projectPathToArtifactId.remove(project.getBasePath());
-        projectsRegisteredToUpdateRules.remove(project.getBasePath());
-        RulesManager.removeInstance(project);
+        dispose();
     }
 
     private String getArtifactId(@NotNull VirtualFile file){
@@ -250,6 +287,13 @@ public class StartProjectComponent implements ProjectComponent {
         }
 
         return null;
+    }
+
+    @Override
+    public void dispose() {
+        projectPathToArtifactId.remove(project.getBasePath());
+        projectsRegisteredToUpdateRules.remove(project.getBasePath());
+        RulesManager.removeInstance(project);
     }
 
 }

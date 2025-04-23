@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.rubix327"
-version = "1.0.29"
+version = "1.0.30"
 
 repositories {
     mavenCentral()
@@ -17,7 +17,7 @@ intellij {
     version.set("2022.3.2")
     type.set("IC") // Target IDE Platform
 
-    plugins.set(listOf("com.intellij.java"))
+    plugins.set(listOf("com.intellij.java", "maven"))
 }
 
 dependencies {
