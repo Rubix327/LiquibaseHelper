@@ -81,7 +81,7 @@ public class MetadataGenerator extends JFrame {
         this.parentalIndex = parentalIndex;
         this.predefinedData = predefinedData == null ? new LinkedHashMap<>() : predefinedData;
 
-        // System.out.println("Got predefinedData map:");
+        System.out.println("Got predefinedData map:");
         for (Map.Entry<TagRule, ?> entry : this.predefinedData.entrySet()) {
             System.out.println("    Tag " + entry.getKey().getTagName() + " --> " + entry.getValue());
         }
@@ -97,7 +97,7 @@ public class MetadataGenerator extends JFrame {
         LinkedHashMap<TagRule, Object> map = new LinkedHashMap<>();
         map.putAll(tagNamesToValues);
         map.putAll(tableValues);
-        // System.out.println("Built map:");
+        System.out.println("Built map:");
         for (Map.Entry<TagRule, Object> entry : map.entrySet()) {
             System.out.println("   [0] " + entry.getKey().getTagName() + " --> " + entry.getValue());
         }
@@ -215,7 +215,6 @@ public class MetadataGenerator extends JFrame {
             compoundTagsPanel.setBorder(createTitledBorder(Localization.message("metadata-generator.compound-tags.title")));
 
             for (TagRule tagRule : tableRules){
-                System.out.println("table rule " + tagRule.getTagName());
                 JPanel tablePanel = createPanelWithTable(tagRule);
                 if (tablePanel != null){
                     compoundTagsPanel.add(tablePanel);
