@@ -32,5 +32,18 @@ public class XmlFileReferenceContributor extends PsiReferenceContributor {
                 new XmlFileReferenceProvider(true)
         );
 
+        // Поддержка открытия методов, классов и пакетов внутри actionCode с actionTypeCode=ExecuteService
+        registrar.registerReferenceProvider(
+                XmlPatterns.xmlTag().withLocalName("actionCode")
+                        .withParent(XmlPatterns.xmlTag()
+                                        .withLocalName("entityOperationMeta")
+                                        .withChild(XmlPatterns.xmlTag()
+                                                .withLocalName("actionTypeCode")
+                                                .withText("<actionTypeCode>ExecuteService</actionTypeCode>")
+                                        )
+                        ),
+                new JavaPathReferenceProvider()
+        );
+
     }
 }

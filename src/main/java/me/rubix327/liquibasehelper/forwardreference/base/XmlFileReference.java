@@ -1,4 +1,4 @@
-package me.rubix327.liquibasehelper.forwardreference;
+package me.rubix327.liquibasehelper.forwardreference.base;
 
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;

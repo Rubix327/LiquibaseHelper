@@ -1,5 +1,6 @@
 package me.rubix327.liquibasehelper;
 
+import com.google.common.collect.Lists;
 import com.intellij.codeInspection.LocalQuickFix;
 import com.intellij.codeInspection.ProblemHighlightType;
 import com.intellij.codeInspection.ProblemsHolder;
@@ -415,6 +416,30 @@ public class Utils {
         titledBorder.setTitleJustification(TitledBorder.LEFT);
         titledBorder.setTitlePosition(TitledBorder.TOP);
         return titledBorder;
+    }
+
+    /**
+     * Получить тег из массива по названию.
+     * @param tags Массив тегов
+     * @param name Название получаемого тега
+     * @param reservedOrder Нужно ли пробегаться по массиву в обратном порядке
+     *                      (для случаев, где последний тег с таким же названием считается более приоритетным, чем первый)
+     * @return Тег или null, если не найден в массиве
+     */
+    @Nullable
+    public static XmlTag getXmlTagByName(@NotNull XmlTag[] tags, @NotNull String name, boolean reservedOrder){
+        List<XmlTag> resultTags;
+        if (reservedOrder){
+            resultTags = Lists.reverse(Arrays.asList(tags));
+        } else {
+            resultTags = Arrays.asList(tags);
+        }
+        for (XmlTag tag : resultTags) {
+            if (name.equals(tag.getName())){
+                return tag;
+            }
+        }
+        return null;
     }
 
 }

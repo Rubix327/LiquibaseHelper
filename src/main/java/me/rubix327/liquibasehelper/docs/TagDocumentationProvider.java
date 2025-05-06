@@ -117,7 +117,7 @@ public class TagDocumentationProvider implements DocumentationProvider {
     }
 
     private String getTextTooltip(XmlText xmlText) {
-        System.out.println(xmlText.getValue());
+//        System.out.println(xmlText.getValue());
         LocalDateTime date = Utils.getDate(xmlText.getValue());
         if (date != null){
             return DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss").format(date);

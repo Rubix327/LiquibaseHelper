@@ -5,6 +5,7 @@ import com.intellij.psi.PsiReference;
 import com.intellij.psi.PsiReferenceProvider;
 import com.intellij.psi.xml.XmlAttributeValue;
 import com.intellij.util.ProcessingContext;
+import me.rubix327.liquibasehelper.forwardreference.base.XmlFileReference;
 import me.rubix327.liquibasehelper.settings.StaticSettings;
 import org.jetbrains.annotations.NotNull;
 

@@ -8,6 +8,7 @@ import com.intellij.psi.xml.XmlAttribute;
 import com.intellij.psi.xml.XmlFile;
 import com.intellij.psi.xml.XmlTag;
 import me.rubix327.liquibasehelper.Utils;
+import me.rubix327.liquibasehelper.inspection.custom.InspectionStorage;
 import me.rubix327.liquibasehelper.inspection.model.*;
 import me.rubix327.liquibasehelper.locale.DeclinationHelper;
 import me.rubix327.liquibasehelper.locale.Localization;
@@ -61,6 +62,7 @@ public class XmlTagValuesInspector extends LocalInspectionTool {
 
                 checkForTagConstraints(tag, holder);
                 checkForRequiredTags(tag, holder);
+                InspectionStorage.getXmlTagInspections().forEach(e -> e.checkForTagConstraints(tag, holder));
             }
 
             @Override
